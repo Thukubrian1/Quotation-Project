@@ -32,10 +32,10 @@
 #    com.paymentservice: DEBUG
 
 mpesa:
-  consumer-key: ${MPESA_CONSUMER_KEY:your-consumer-key}
-  consumer-secret: ${MPESA_CONSUMER_SECRET:your-consumer-secret}
+  consumer-key: ${MPESA_CONSUMER_KEY:81HfGiuruCS23e1CxGpxCjC2zPDbAip3spvT7NPUCFc5np0v}
+  consumer-secret: ${MPESA_CONSUMER_SECRET:z4JDMMPh2yLHTKAsj6EqRNszjSVV5ecsRxwXUIzOmvn88RVyAfDg3JnslcAbhqQv}
   base-url: ${MPESA_BASE_URL:https://sandbox.safaricom.co.ke}
-  business-short-code: ${MPESA_BUSINESS_SHORT_CODE:174379}
+  business-short-code: ${MPESA_BUSINESS_SHORT_CODE:N/A}
   passkey: ${MPESA_PASSKEY:your-passkey}
   callback-url: ${MPESA_CALLBACK_URL:https://your-domain.com/api/v1/payments/mpesa/callback}
 
@@ -75,7 +75,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${JWT_ISSUER_URI:your-auth-service-uri}
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8443/auth/login?username=Brian Thuku&password=thukubrianngugi1@gmail.com}
 
 logging:
   level:

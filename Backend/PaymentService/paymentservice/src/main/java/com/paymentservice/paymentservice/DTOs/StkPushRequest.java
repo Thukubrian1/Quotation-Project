@@ -2,12 +2,16 @@ package com.paymentservice.paymentservice.DTOs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class StkPushRequest {
     @JsonProperty("BusinessShortCode")
     private String businessShortCode;
@@ -22,7 +26,7 @@ public class StkPushRequest {
     private String transactionType;
 
     @JsonProperty("Amount")
-    private String amount;
+    private BigDecimal amount;
 
     @JsonProperty("PartyA")
     private String partyA;

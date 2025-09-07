@@ -6,6 +6,7 @@ import jakarta.persistence. *;
 import jakarta.persistence.Table;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,10 +16,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Getter
 @Setter
+@Builder
 public class PaymentTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private BigDecimal id;
 
     @Column(name = "merchant_request_id")
     private String merchantRequestId;
@@ -30,7 +32,7 @@ public class PaymentTransaction {
     private String phoneNumber;
 
     @Column(name = "amount")
-    private String amount;
+    private BigDecimal amount;
 
     @Column(name = "account_reference")
     private String accountReference;
