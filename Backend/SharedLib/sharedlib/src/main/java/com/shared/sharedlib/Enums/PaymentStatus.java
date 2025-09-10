@@ -1,11 +1,7 @@
 package com.shared.sharedlib.Enums;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
-@AllArgsConstructor
 @Getter
 public enum PaymentStatus {
 
@@ -24,4 +20,8 @@ public enum PaymentStatus {
 
     private final String description;
 
+    // Constructor for enum
+    PaymentStatus(String description) {
+        this.description = description;
+    }
 }

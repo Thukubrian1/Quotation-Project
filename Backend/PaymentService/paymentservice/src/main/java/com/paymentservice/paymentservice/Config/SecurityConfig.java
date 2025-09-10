@@ -3,50 +3,99 @@ package com.paymentservice.paymentservice.Config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
+    private final BearerTokenAuthenticationFilter bearerTokenAuthenticationFilter;
+
+    public SecurityConfig(BearerTokenAuthenticationFilter bearerTokenAuthenticationFilter) {
+        this.bearerTokenAuthenticationFilter = bearerTokenAuthenticationFilter;
+    }
+
     @Bean
+    @Profile("!dev")
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/h2-console/**")
                         .ignoringRequestMatchers("/api/v1/payments/mpesa/callback")
+                        .ignoringRequestMatchers("/h2-console/**") // Disable CSRF for H2 console
                 )
                 .headers(headers -> headers
-                        .frameOptions().sameOrigin() // Allow H2 console frames
+                        .addHeaderWriter(new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN))
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/api/v1/payments/mpesa/callback").permitAll()
+                        .requestMatchers("/actuator/health", "/health").permitAll()
+                        .requestMatchers("/api/v1/payments/public-health").permitAll()
                         .requestMatchers("/h2-console/**").permitAll() // Allow H2 console access
-                        .requestMatchers("/api/v1/payments/mpesa/callback").permitAll() // M-Pesa callback
-                        .requestMatchers("/actuator/**").permitAll() // Actuator endpoints
+                        .requestMatchers("/api/v1/payments/**").authenticated()
                         .anyRequest().authenticated()
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> {}) // Use default JWT configuration
-                );
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(401); // Return 401 instead of 403
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Access denied\"}");
+                        })
+                )
+                .addFilterBefore(bearerTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // Development profile specific configuration
     @Bean
     @Profile("dev")
     public SecurityFilterChain devFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
-                .headers(headers -> headers.frameOptions().disable())
+                .csrf(csrf -> csrf.disable()) // Disable CSRF completely in dev
+                .headers(headers -> headers
+                        .addHeaderWriter(new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.DENY))
+                        .disable() // Disable all security headers in dev for H2 console
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll() // H2 console - no auth needed in dev
                         .requestMatchers("/api/v1/payments/mpesa/callback").permitAll()
+                        .requestMatchers("/api/v1/examples/**").permitAll() // All example endpoints - no auth in dev
                         .requestMatchers("/actuator/**").permitAll()
-                        .anyRequest().permitAll() // Allow all requests in dev mode
-                );
+                        .requestMatchers("/health").permitAll()
+                        .requestMatchers("/api/v1/payments/public-health").permitAll()
+                        .requestMatchers("/api/v1/payments/**").authenticated() // Still require auth for payment endpoints
+                        .anyRequest().permitAll() // Allow all other requests in dev
+                )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(401); // Return 401 instead of 403
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Access denied\"}");
+                        })
+                )
+                .addFilterBefore(bearerTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

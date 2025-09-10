@@ -1,5 +1,6 @@
 package com.shared.sharedlib.Dtos;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.shared.sharedlib.Enums.ResponseStatusEnum;
 import lombok.*;
 
@@ -8,6 +9,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class GenericResponse<T> {
 
     private ResponseStatusEnum status;
@@ -20,14 +22,6 @@ public class GenericResponse<T> {
         return GenericResponse.<T>builder()
                 .status(ResponseStatusEnum.SUCCESS)
                 .message("Operation successful")
-                .data(data)
-                .build();
-    }
-
-    public static <T> GenericResponse<T> success(String message, T data) {
-        return GenericResponse.<T>builder()
-                .status(ResponseStatusEnum.SUCCESS)
-                .message(message)
                 .data(data)
                 .build();
     }
@@ -64,6 +58,21 @@ public class GenericResponse<T> {
     public static <T> GenericResponse<T> forbidden(String message) {
         return GenericResponse.<T>builder()
                 .status(ResponseStatusEnum.FORBIDDEN)
+                .message(message)
+                .build();
+    }
+
+    public static <T> GenericResponse<T> validationError(String message, T errors) {
+        return GenericResponse.<T>builder()
+                .status(ResponseStatusEnum.VALIDATION_ERROR)
+                .message(message)
+                .data(errors)
+                .build();
+    }
+
+    public static <T> GenericResponse<T> badRequest(String message) {
+        return GenericResponse.<T>builder()
+                .status(ResponseStatusEnum.BAD_REQUEST)
                 .message(message)
                 .build();
     }

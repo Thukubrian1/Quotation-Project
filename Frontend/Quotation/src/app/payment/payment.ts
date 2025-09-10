@@ -49,7 +49,9 @@ export class Payment {
           // Success scenario
           console.log('Payment processed successfully:', this.paymentData);
           this.router.navigate(['/payment-success']);
-        } else {
+        }
+        
+        else {
           throw new Error('Invalid payment data');
         }
       } catch (error) {

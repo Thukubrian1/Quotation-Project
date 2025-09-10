@@ -1,0 +1,33 @@
+# Application Configuration
+server:
+  port: 8443
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: auth-service
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:myverylongandsecurejwtsecretkeythatisatleast32chars}
+  expiration: ${JWT_EXPIRATION:3600000}
+
+# Logging Configuration
+logging:
+  level:
+    com.authservice: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Management endpoints (for health check)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

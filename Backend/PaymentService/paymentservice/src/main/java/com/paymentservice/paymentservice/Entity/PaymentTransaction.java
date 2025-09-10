@@ -1,9 +1,7 @@
 package com.paymentservice.paymentservice.Entity;
 
 import com.shared.sharedlib.Enums.PaymentStatus;
-import jakarta.persistence.Entity;
-import jakarta.persistence. *;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -20,7 +18,7 @@ import java.time.LocalDateTime;
 public class PaymentTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private BigDecimal id;
+    private Long id; // Changed from BigDecimal to Long - BigDecimal is not suitable for ID
 
     @Column(name = "merchant_request_id")
     private String merchantRequestId;
@@ -28,20 +26,20 @@ public class PaymentTransaction {
     @Column(name = "checkout_request_id")
     private String checkoutRequestId;
 
-    @Column(name = "phone_number")
+    @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
-    @Column(name = "amount")
+    @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "account_reference")
+    @Column(name = "account_reference", nullable = false)
     private String accountReference;
 
-    @Column(name = "transaction_description")
+    @Column(name = "transaction_description", length = 500)
     private String transactionDescription;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private PaymentStatus status;
 
     @Column(name = "mpesa_receipt_number")
@@ -50,10 +48,10 @@ public class PaymentTransaction {
     @Column(name = "transaction_date")
     private LocalDateTime transactionDate;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist
