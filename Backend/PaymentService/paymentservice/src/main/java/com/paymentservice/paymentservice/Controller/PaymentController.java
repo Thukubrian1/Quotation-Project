@@ -1,10 +1,7 @@
 package com.paymentservice.paymentservice.Controller;
 
 import com.paymentservice.paymentservice.Config.MpesaProperties;
-import com.paymentservice.paymentservice.DTOs.AccessTokenResponse;
-import com.paymentservice.paymentservice.DTOs.PaymentRequest;
-import com.paymentservice.paymentservice.DTOs.PaymentResponse;
-import com.paymentservice.paymentservice.DTOs.StkCallback;
+import com.paymentservice.paymentservice.DTOs.*;
 import com.paymentservice.paymentservice.Service.MpesaService;
 import com.shared.sharedlib.Dtos.GenericResponse;
 import com.shared.sharedlib.Enums.ResponseStatusEnum;
@@ -112,6 +109,45 @@ public class PaymentController {
                     .build();
 
             return ResponseEntity.status(ResponseStatusEnum.ERROR.getHttpStatus()).body(response);
+        }
+    }
+
+    @GetMapping("/status")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<GenericResponse<PaymentStatusResponse>> checkPaymentStatus(
+            @RequestParam String checkoutRequestId) {
+        try {
+            log.info("Checking payment status for CheckoutRequestID: {}", checkoutRequestId);
+
+            PaymentStatusResponse statusResponse = mpesaService.getPaymentStatus(checkoutRequestId);
+
+            GenericResponse<PaymentStatusResponse> response = GenericResponse.<PaymentStatusResponse>builder()
+                    .status(ResponseStatusEnum.SUCCESS)
+                    .message("Payment status retrieved successfully")
+                    .data(statusResponse)
+                    .build();
+
+            return ResponseEntity.ok(response);
+
+        } catch (BusinessException e) {
+            GenericResponse<PaymentStatusResponse> errorResponse = GenericResponse.<PaymentStatusResponse>builder()
+                    .status(e.getStatus())
+                    .message(e.getMessage())
+                    .debugMessage(e.getDebugMessage())
+                    .build();
+
+            return ResponseEntity.status(e.getStatus().getHttpStatus()).body(errorResponse);
+
+        } catch (Exception e) {
+            log.error("Error checking payment status for CheckoutRequestID: {}", checkoutRequestId, e);
+
+            GenericResponse<PaymentStatusResponse> errorResponse = GenericResponse.<PaymentStatusResponse>builder()
+                    .status(ResponseStatusEnum.ERROR)
+                    .message("Failed to check payment status")
+                    .debugMessage(e.getMessage())
+                    .build();
+
+            return ResponseEntity.status(ResponseStatusEnum.ERROR.getHttpStatus()).body(errorResponse);
         }
     }
 

@@ -97,112 +97,6 @@ public class MpesaServiceImpl implements MpesaService {
         }
     }
 
-    /**
-     * Example method showing how to call external service with bearer token
-     */
-    public void callExternalServiceWithAuth(String data, String username, String password) {
-        try {
-            // Option 1: Use the pre-configured RestTemplate with interceptor (if token is set in config)
-            if (isExternalTokenConfigured()) {
-                callExternalServiceWithConfiguredToken(data);
-            } else {
-                // Option 2: Get token dynamically from auth service
-                callExternalServiceWithDynamicToken(data, username, password);
-            }
-
-        } catch (Exception e) {
-            log.error("Error calling external service", e);
-            throw new BusinessException(
-                    ResponseStatusEnum.ERROR,
-                    "Failed to communicate with external service",
-                    e.getMessage()
-            );
-        }
-    }
-
-    private void callExternalServiceWithConfiguredToken(String data) {
-        String url = authServiceBaseUrl + "/some-endpoint";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> entity = new HttpEntity<>(data, headers);
-
-        // This will automatically include the bearer token via interceptor
-        ResponseEntity<String> response = authenticatedRestTemplate.postForEntity(
-                url, entity, String.class
-        );
-
-        log.info("External service response: {}", response.getBody());
-    }
-
-    private void callExternalServiceWithDynamicToken(String data, String username, String password) {
-        // Get token from auth service
-        String token = authServiceClient.login(username, password);
-
-        String url = authServiceBaseUrl + "/some-endpoint";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + token);
-
-        HttpEntity<String> entity = new HttpEntity<>(data, headers);
-
-        // Use regular RestTemplate with explicit Authorization header
-        ResponseEntity<String> response = mpesaRestTemplate.postForEntity(
-                url, entity, String.class
-        );
-
-        log.info("External service response: {}", response.getBody());
-    }
-
-    /**
-     * Example: Call external service using token from current security context
-     */
-    public void callExternalServiceWithCurrentUserToken(String data) {
-        try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null || !auth.isAuthenticated()) {
-                throw new BusinessException(
-                        ResponseStatusEnum.UNAUTHORIZED,
-                        "User not authenticated",
-                        "No valid authentication context found"
-                );
-            }
-
-            String currentUser = auth.getName();
-            log.info("Making external service call for authenticated user: {}", currentUser);
-
-            String url = authServiceBaseUrl + "/some-endpoint";
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            // Note: In a real scenario, you'd extract the actual JWT token from the request
-            // For now, using the configured bearer token
-
-            HttpEntity<String> entity = new HttpEntity<>(data, headers);
-
-            ResponseEntity<String> response = authenticatedRestTemplate.postForEntity(
-                    url, entity, String.class
-            );
-
-            log.info("External service call successful for user: {}", currentUser);
-
-        } catch (Exception e) {
-            log.error("Error calling external service for current user", e);
-            throw new BusinessException(
-                    ResponseStatusEnum.ERROR,
-                    "Failed to communicate with external service",
-                    e.getMessage()
-            );
-        }
-    }
-
-    private boolean isExternalTokenConfigured() {
-        return StringUtils.hasText(System.getProperty("external.service.bearer-token")) ||
-                StringUtils.hasText(System.getenv("EXTERNAL_SERVICE_TOKEN"));
-    }
-
     @Override
     public PaymentResponse initiateSTKPush(PaymentRequest request) {
         try {
@@ -329,9 +223,10 @@ public class MpesaServiceImpl implements MpesaService {
 
             StkCallback.StkCallbackData callbackData = callback.getBody().getStkCallback();
             String checkoutRequestId = callbackData.getCheckoutRequestID();
+            Integer resultCode = callbackData.getResultCode();
 
-            log.info("Processing callback for CheckoutRequestID: {}, ResultCode: {}",
-                    checkoutRequestId, callbackData.getResultCode());
+            log.info("Processing callback for CheckoutRequestID: {}, ResultCode: {}, ResultDesc: {}",
+                    checkoutRequestId, resultCode, callbackData.getResultDesc());
 
             Optional<PaymentTransaction> transactionOpt = paymentRepository.findByCheckoutRequestId(checkoutRequestId);
 
@@ -346,28 +241,24 @@ public class MpesaServiceImpl implements MpesaService {
 
             PaymentTransaction transaction = transactionOpt.get();
 
-            if (callbackData.getResultCode() == 0) {
-                // Payment successful
-                transaction.setStatus(PaymentStatus.COMPLETED);
-                log.info("Payment successful for CheckoutRequestID: {}", checkoutRequestId);
+            // Map M-Pesa result codes to payment statuses
+            PaymentStatus newStatus = mapResultCodeToStatus(resultCode, callbackData.getResultDesc());
+            transaction.setStatus(newStatus);
 
-                // Extract M-Pesa receipt number
-                extractReceiptNumber(callbackData, transaction);
+            log.info("Payment status updated to {} for CheckoutRequestID: {}", newStatus, checkoutRequestId);
 
-            } else {
-                // Payment failed
-                transaction.setStatus(PaymentStatus.FAILED);
-                log.warn("Payment failed for CheckoutRequestID: {}, ResultCode: {}, ResultDesc: {}",
-                        checkoutRequestId, callbackData.getResultCode(), callbackData.getResultDesc());
+            // Extract additional data for successful payments
+            if (resultCode == 0) {
+                extractCallbackMetadata(callbackData, transaction);
             }
 
             transaction.setUpdatedAt(LocalDateTime.now());
             paymentRepository.save(transaction);
 
-            log.info("Payment callback processed successfully for CheckoutRequestID: {}", checkoutRequestId);
+            log.info("Payment callback processed successfully for CheckoutRequestID: {} with status: {}",
+                    checkoutRequestId, newStatus);
 
         } catch (BusinessException e) {
-            // Re-throw business exceptions as-is
             throw e;
         } catch (Exception e) {
             log.error("Error processing payment callback", e);
@@ -377,6 +268,36 @@ public class MpesaServiceImpl implements MpesaService {
                     e.getMessage()
             );
         }
+    }
+
+    @Override
+    public PaymentStatusResponse getPaymentStatus(String checkoutRequestId) {
+        log.info("Retrieving payment status for CheckoutRequestID: {}", checkoutRequestId);
+
+        Optional<PaymentTransaction> transactionOpt = paymentRepository.findByCheckoutRequestId(checkoutRequestId);
+
+        if (transactionOpt.isEmpty()) {
+            throw new BusinessException(
+                    ResponseStatusEnum.NOT_FOUND,
+                    "Transaction not found",
+                    "No transaction found for CheckoutRequestID: " + checkoutRequestId
+            );
+        }
+
+        PaymentTransaction transaction = transactionOpt.get();
+
+        return PaymentStatusResponse.builder()
+                .checkoutRequestId(transaction.getCheckoutRequestId())
+                .merchantRequestId(transaction.getMerchantRequestId())
+                .phoneNumber(transaction.getPhoneNumber())
+                .amount(transaction.getAmount())
+                .accountReference(transaction.getAccountReference())
+                .status(transaction.getStatus().name())
+                .mpesaReceiptNumber(transaction.getMpesaReceiptNumber())
+                .transactionDate(transaction.getTransactionDate())
+                .createdAt(transaction.getCreatedAt())
+                .updatedAt(transaction.getUpdatedAt())
+                .build();
     }
 
     private void validatePaymentRequest(PaymentRequest request) {
@@ -423,18 +344,6 @@ public class MpesaServiceImpl implements MpesaService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
-    }
-
-    private void extractReceiptNumber(StkCallback.StkCallbackData callbackData, PaymentTransaction transaction) {
-        if (callbackData.getCallbackMetadata() != null && callbackData.getCallbackMetadata().getItem() != null) {
-            for (StkCallback.CallbackItem item : callbackData.getCallbackMetadata().getItem()) {
-                if ("MpesaReceiptNumber".equals(item.getName()) && item.getValue() != null) {
-                    transaction.setMpesaReceiptNumber(item.getValue().toString());
-                    log.info("M-Pesa receipt number extracted: {}", transaction.getMpesaReceiptNumber());
-                    break;
-                }
-            }
-        }
     }
 
     private String getMpesaAccessToken() {
@@ -530,5 +439,70 @@ public class MpesaServiceImpl implements MpesaService {
                 .accountReference(request.getAccountReference())
                 .transactionDesc(request.getTransactionDescription())
                 .build();
+    }
+
+    private PaymentStatus mapResultCodeToStatus(Integer resultCode, String resultDesc) {
+        if (resultCode == null) {
+            return PaymentStatus.FAILED;
+        }
+
+        switch (resultCode) {
+            case 0:
+                return PaymentStatus.COMPLETED;
+            case 1:
+                return PaymentStatus.FAILED; // Insufficient funds
+            case 1001:
+                return PaymentStatus.FAILED; // Invalid phone number
+            case 1019:
+                return PaymentStatus.FAILED; // Invalid amount
+            case 1032:
+                return PaymentStatus.CANCELLED; // Request cancelled by user
+            case 1037:
+                return PaymentStatus.EXPIRED; // DS timeout user cannot be reached
+            case 2001:
+                return PaymentStatus.FAILED; // Wrong PIN entered
+            case 1025:
+                return PaymentStatus.FAILED; // Unable to lock subscriber amount
+            case 1026:
+                return PaymentStatus.FAILED; // Subscriber not active
+            case 1027:
+                return PaymentStatus.FAILED; // Not a registered M-PESA user
+            case 1036:
+                return PaymentStatus.CANCELLED; // Transaction cancelled by user
+            case 1012:
+                return PaymentStatus.EXPIRED; // Transaction expired
+            case 9999:
+                return PaymentStatus.FAILED; // Request timeout
+            default:
+                log.warn("Unknown M-Pesa result code: {} with description: {}", resultCode, resultDesc);
+                return PaymentStatus.FAILED;
+        }
+    }
+
+    private void extractCallbackMetadata(StkCallback.StkCallbackData callbackData, PaymentTransaction transaction) {
+        if (callbackData.getCallbackMetadata() != null && callbackData.getCallbackMetadata().getItem() != null) {
+            for (StkCallback.CallbackItem item : callbackData.getCallbackMetadata().getItem()) {
+                switch (item.getName()) {
+                    case "MpesaReceiptNumber":
+                        if (item.getValue() != null) {
+                            transaction.setMpesaReceiptNumber(item.getValue().toString());
+                            log.info("M-Pesa receipt number extracted: {}", transaction.getMpesaReceiptNumber());
+                        }
+                        break;
+                    case "TransactionDate":
+                        // You can extract and store transaction date if needed
+                        log.debug("Transaction date from M-Pesa: {}", item.getValue());
+                        break;
+                    case "Amount":
+                        // Verify amount matches
+                        log.debug("Amount from M-Pesa: {}", item.getValue());
+                        break;
+                    case "PhoneNumber":
+                        // Verify phone number matches
+                        log.debug("Phone number from M-Pesa: {}", item.getValue());
+                        break;
+                }
+            }
+        }
     }
 }

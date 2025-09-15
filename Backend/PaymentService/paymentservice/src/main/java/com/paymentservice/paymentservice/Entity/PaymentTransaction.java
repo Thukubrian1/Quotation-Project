@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(schema = "payment_transactions", name = "payment_transactions")
+@Table(name = "payment_transactions")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 public class PaymentTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Changed from BigDecimal to Long - BigDecimal is not suitable for ID
+    private Long id;
 
     @Column(name = "merchant_request_id")
     private String merchantRequestId;

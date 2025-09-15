@@ -1,10 +1,9 @@
-# Payment Service Configuration
 server:
-  port: 8081
+  port: 8083
 
 spring:
   application:
-    name: payment-service
+    name: quotationservice
 
   profiles:
     active: dev
@@ -28,6 +27,14 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
     defer-datasource-initialization: true
 
+  # SQL script initialization
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
+      continue-on-error: false
+
 jwt:
   secret: ${JWT_SECRET:myverylongandsecurejwtsecretkeythatisatleast32chars}
   expiration: ${JWT_EXPIRATION:3600000}
@@ -43,17 +50,6 @@ external:
       username: ${SERVICE_ACCOUNT_USERNAME:service-payment}
       password: ${SERVICE_ACCOUNT_PASSWORD:service-password}
 
-# M-Pesa Daraja API Configuration
-mpesa:
-  daraja:
-    consumer-key: 81HfGiuruCS23e1CxGpxCjC2zPDbAip3spvT7NPUCFc5np0v
-    consumer-secret: z4JDMMPh2yLHTKAsj6EqRNszjSVV5ecsRxwXUIzOmvn88RVyAfDg3JnslcAbhqQv
-    pass-key: bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
-    business-short-code: 174379
-    stk-push-request-url: https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest
-    callback-url: https://ed4e4wba4caa5.ngrok-free.app/api/v1/payments/mpesa/callback
-    oauth-endpoint: https://sandbox.safaricom.co.ke/oauth/v1/generate
-
 # Logging Configuration
 logging:
   level:
@@ -61,7 +57,6 @@ logging:
     org.springframework.security: DEBUG
     org.springframework.web.client: DEBUG
     org.springframework.web.filter: DEBUG
-    org.h2.server.web: DEBUG
     org.springframework.jdbc: DEBUG
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
@@ -71,7 +66,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,h2-console
+        include: health,info
   endpoint:
     health:
       show-details: always
