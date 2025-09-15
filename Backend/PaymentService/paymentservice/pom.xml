@@ -12,7 +12,7 @@
     <artifactId>paymentservice</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>paymentservice</name>
-    <description>Demo project for Spring Boot</description>
+    <description>Payment Service to handle payments</description>
     <properties>
         <java.version>17</java.version> <!-- Fixed: Use stable Java version -->
     </properties>
