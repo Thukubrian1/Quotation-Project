@@ -24,7 +24,7 @@ import java.util.Base64;
 @RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor
 @Slf4j
-public class PaymentController {
+public class MpesaPaymentController {
 
     private final MpesaService mpesaService;
     private final MpesaProperties mpesaProperties;
@@ -215,7 +215,7 @@ public class PaymentController {
         }
     }
 
-    @GetMapping("/health")
+    @GetMapping("/mpesa/health")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<GenericResponse<String>> healthCheck() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

@@ -54,6 +54,14 @@ mpesa:
     callback-url: https://ed4e4wba4caa5.ngrok-free.app/api/v1/payments/mpesa/callback
     oauth-endpoint: https://sandbox.safaricom.co.ke/oauth/v1/generate
 
+# Bank API Configuration
+bank:
+  api:
+    endpoint: ${BANK_API_ENDPOINT:https://api.stripe.com/v1}
+    key: ${BANK_API_KEY:sk_test_51RGypRFx00YQfi3JPzH4BJMXq5MmxlZSZYqjQ2w31g5roUrKiXD447EGTzOawcbQykPs9O2Zra7ehS4OxiIS9Wjj00ZOlKNsiY}
+  merchant:
+    id: ${BANK_MERCHANT_ID:acct_1S7v45CA4zTmdTAk}
+
 # Logging Configuration
 logging:
   level:
