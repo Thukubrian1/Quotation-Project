@@ -5,5 +5,6 @@
     <file url="file://$PROJECT_DIR$/PaymentService/paymentservice/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/QuotationService/quotationservice/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/SharedLib/sharedlib/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/UserService/userservice/src/main/java" charset="UTF-8" />
   </component>
 </project>

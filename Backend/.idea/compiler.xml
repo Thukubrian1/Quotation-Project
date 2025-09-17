@@ -12,16 +12,17 @@
         </processorPath>
         <module name="quotationservice" />
       </profile>
-      <profile name="Annotation profile for sharedlib" enabled="true">
+      <profile name="Annotation profile for userservice" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
         </processorPath>
+        <module name="sharedlib" />
         <module name="paymentservice" />
         <module name="authservice" />
-        <module name="sharedlib" />
+        <module name="userservice" />
       </profile>
     </annotationProcessing>
   </component>
@@ -31,6 +32,7 @@
       <module name="paymentservice" options="-parameters" />
       <module name="quotationservice" options="-parameters" />
       <module name="sharedlib" options="-parameters" />
+      <module name="userservice" options="-parameters" />
     </option>
   </component>
 </project>

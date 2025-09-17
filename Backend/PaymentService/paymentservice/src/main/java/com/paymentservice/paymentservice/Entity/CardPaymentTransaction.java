@@ -31,7 +31,7 @@ public class CardPaymentTransaction {
     private String currency;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     private TransactionStatus status;
 
     @Column(name = "card_token_id")

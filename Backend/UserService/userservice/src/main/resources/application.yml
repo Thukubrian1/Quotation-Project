@@ -1,0 +1,66 @@
+# User Service Configuration
+server:
+  port: 8085
+
+spring:
+  application:
+    name: user-service
+
+  profiles:
+    active: dev
+
+  # Database Configuration
+  datasource:
+    url: jdbc:mysql://localhost:3306/Quotation
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: Thukubrian1@2025
+
+  # JPA Configuration
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    defer-datasource-initialization: true
+
+jwt:
+  secret: ${JWT_SECRET:myverylongandsecurejwtsecretkeythatisatleast32chars}
+  expiration: ${JWT_EXPIRATION:3600000}
+
+# External Service Configuration
+external:
+  service:
+    auth-service:
+      base-url: ${AUTH_SERVICE_URL:http://localhost:8443}
+
+    # Service credentials for dynamic token retrieval (if needed)
+    service-account:
+      username: ${SERVICE_ACCOUNT_USERNAME:service-payment}
+      password: ${SERVICE_ACCOUNT_PASSWORD:service-password}
+
+# Logging Configuration
+logging:
+  level:
+    com.paymentservice: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web.client: DEBUG
+    org.springframework.web.filter: DEBUG
+    org.h2.server.web: DEBUG
+    org.springframework.jdbc: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,h2-console
+  endpoint:
+    health:
+      show-details: always
