@@ -2,7 +2,7 @@ export interface PaymentRequest {
   phoneNumber: string;
   amount: number;
   accountReference: string;
-  transactionDescription?: string;
+  transactionDescription: string;
 }
 
 export interface PaymentResponse {

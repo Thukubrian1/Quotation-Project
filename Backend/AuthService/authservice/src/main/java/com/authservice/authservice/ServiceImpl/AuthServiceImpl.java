@@ -11,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -22,33 +20,42 @@ public class AuthServiceImpl implements AuthService {
     private final JWTUtil jwtUtil;
 
     @Override
-    public String login(String username, String password){
+    public String login(String userName, String userEmail) {
         try {
+            log.debug("Attempting login for username: {} and email: {}", userName, userEmail);
 
-            User existingUser = authRepository.findByUserName(username);
+            User existingUser = authRepository.findByUserName(userName);
 
-            if(existingUser == null){
-                log.warn("Invalid login attempt for username: {}", username);
-                throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "User not found with name " + username);
-            }
-
-            if(existingUser.getStatus() == UserStatus.Inactive){
-                log.warn("Login attempt for inactive user: {}", username);
-                throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "User account is inactive");
-            }
-
-            if(existingUser.getStatus() == UserStatus.Suspended){
-                log.warn("Login attempt for suspended user: {}", username);
-                throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "User account is suspended");
-            }
-
-            if(existingUser.getUserPassword() == null || !existingUser.getUserPassword().equals(password)){
-                log.warn("Invalid password attempt for username: {}", username);
+            if (existingUser == null) {
+                log.warn("Invalid login attempt - user not found for username: {}", userName);
                 throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "Invalid username or password");
             }
 
-            String token = jwtUtil.generateToken(username);
-            log.info("Successful login for username: {}", username);
+            if (existingUser.getStatus() == UserStatus.Inactive) {
+                log.warn("Login attempt for inactive user: {}", userName);
+                throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "User account is inactive");
+            }
+
+            if (existingUser.getStatus() == UserStatus.Suspended) {
+                log.warn("Login attempt for suspended user: {}", userName);
+                throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "User account is suspended");
+            }
+
+            if (existingUser.getUserEmail() == null || !existingUser.getUserEmail().equals(userEmail)) {
+                log.warn("Email mismatch for user: {}. Expected: {}, Got: {}",
+                        userName, existingUser.getUserEmail(), userEmail);
+                throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "Invalid username or password");
+            }
+
+
+            if(existingUser.getUserRole() == null || !existingUser.getUserRole().equals("Admin")){
+
+                log.warn("Email mismatch for user: {}. Expected: {}, Got: {}",
+                        userName, existingUser.getUserEmail(), userEmail);
+                throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "User must have admin Role");
+            }
+            String token = jwtUtil.generateToken(userName);
+            log.info("Successful login for username: {}", userName);
             return token;
 
         }
@@ -56,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
             throw e;
         }
         catch (Exception e) {
-            log.error("Unexpected error during login for username: {}", username, e);
+            log.error("Unexpected error during login for username: {}", userName, e);
             throw new BusinessException(
                     ResponseStatusEnum.ERROR,
                     "Could not process login request",

@@ -20,34 +20,49 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth")
 @Slf4j
+@CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200"}) // Add CORS at controller level
 public class AuthController {
 
     private final AuthService authService;
     private final JWTUtil jwtUtil;
 
+    // Accept both form data and JSON
     @PostMapping("/login")
     public ResponseEntity<GenericResponse<Map<String, String>>> login(
-            @RequestParam String username,
-            @RequestParam String password) {
+            @RequestParam(required = false) String userName,
+            @RequestParam(required = false) String userEmail,
+            @RequestBody(required = false) Map<String, String> loginRequest) {
 
         try {
+            // Handle both form data and JSON body
+            String user = userName;
+            String email = userEmail;
+
+            if (loginRequest != null && !loginRequest.isEmpty()) {
+                user = loginRequest.get("username");
+                email = loginRequest.get("email");
+            }
+
+            log.info("Login attempt for username: {}", user);
+
             // Validate input parameters
-            if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+            if (!StringUtils.hasText(user) || !StringUtils.hasText(email)) {
+                log.warn("Missing username or password in login request");
                 GenericResponse<Map<String, String>> response = GenericResponse.<Map<String, String>>builder()
                         .status(ResponseStatusEnum.BAD_REQUEST)
                         .message("Username and password are required")
                         .build();
-                return ResponseEntity.status(ResponseStatusEnum.BAD_REQUEST.getHttpStatus()).body(response);
+                return ResponseEntity.status(400).body(response);
             }
 
             // Attempt login
-            String token = authService.login(username.trim(), password.trim());
+            String token = authService.login(user.trim(), email.trim());
 
             // Prepare response data
             Map<String, String> tokenData = new HashMap<>();
             tokenData.put("access_token", token);
             tokenData.put("token_type", "Bearer");
-            tokenData.put("username", username.trim());
+            tokenData.put("username", user.trim());
 
             GenericResponse<Map<String, String>> response = GenericResponse.<Map<String, String>>builder()
                     .status(ResponseStatusEnum.SUCCESS)
@@ -55,10 +70,11 @@ public class AuthController {
                     .data(tokenData)
                     .build();
 
+            log.info("Successful login for username: {}", user);
             return ResponseEntity.ok(response);
 
         } catch (BusinessException e) {
-            log.warn("Business exception during login for username: {}", username, e);
+            log.warn("Business exception during login: {}", e.getMessage());
 
             GenericResponse<Map<String, String>> response = GenericResponse.<Map<String, String>>builder()
                     .status(e.getStatus())
@@ -66,10 +82,10 @@ public class AuthController {
                     .debugMessage(e.getDebugMessage())
                     .build();
 
-            return ResponseEntity.status(e.getStatus().getHttpStatus()).body(response);
+            return ResponseEntity.status(401).body(response);
 
         } catch (Exception e) {
-            log.error("Unexpected error during login for username: {}", username, e);
+            log.error("Unexpected error during login", e);
 
             GenericResponse<Map<String, String>> response = GenericResponse.<Map<String, String>>builder()
                     .status(ResponseStatusEnum.ERROR)
@@ -77,8 +93,17 @@ public class AuthController {
                     .debugMessage(e.getMessage())
                     .build();
 
-            return ResponseEntity.status(ResponseStatusEnum.ERROR.getHttpStatus()).body(response);
+            return ResponseEntity.status(500).body(response);
         }
+    }
+
+    // Add a simple test endpoint
+    @GetMapping("/test")
+    public ResponseEntity<Map<String, String>> test() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Auth service is running");
+        response.put("timestamp", String.valueOf(System.currentTimeMillis()));
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/validate")
@@ -92,7 +117,7 @@ public class AuthController {
                         .message("Missing or invalid Authorization header. Expected format: Bearer <token>")
                         .data(createValidationResponse(false, null, "Missing authorization header"))
                         .build();
-                return ResponseEntity.status(ResponseStatusEnum.BAD_REQUEST.getHttpStatus()).body(response);
+                return ResponseEntity.status(400).body(response);
             }
 
             String token = authHeader.substring(7);
@@ -103,7 +128,7 @@ public class AuthController {
                         .message("Token is required")
                         .data(createValidationResponse(false, null, "Empty token"))
                         .build();
-                return ResponseEntity.status(ResponseStatusEnum.BAD_REQUEST.getHttpStatus()).body(response);
+                return ResponseEntity.status(400).body(response);
             }
 
             // Validate token and extract username
@@ -113,19 +138,10 @@ public class AuthController {
                         .message("Token has expired or is invalid")
                         .data(createValidationResponse(false, null, "Token expired or invalid"))
                         .build();
-                return ResponseEntity.status(ResponseStatusEnum.UNAUTHORIZED.getHttpStatus()).body(response);
+                return ResponseEntity.status(401).body(response);
             }
 
             String username = jwtUtil.extractUsername(token);
-
-            if (!StringUtils.hasText(username)) {
-                GenericResponse<Map<String, Object>> response = GenericResponse.<Map<String, Object>>builder()
-                        .status(ResponseStatusEnum.UNAUTHORIZED)
-                        .message("Invalid token - no username found")
-                        .data(createValidationResponse(false, null, "No username in token"))
-                        .build();
-                return ResponseEntity.status(ResponseStatusEnum.UNAUTHORIZED.getHttpStatus()).body(response);
-            }
 
             GenericResponse<Map<String, Object>> response = GenericResponse.<Map<String, Object>>builder()
                     .status(ResponseStatusEnum.SUCCESS)
@@ -143,7 +159,7 @@ public class AuthController {
                     .message("Token has expired")
                     .data(createValidationResponse(false, null, "Token expired"))
                     .build();
-            return ResponseEntity.status(ResponseStatusEnum.UNAUTHORIZED.getHttpStatus()).body(response);
+            return ResponseEntity.status(401).body(response);
         }
 
         catch (Exception e) {
@@ -156,7 +172,7 @@ public class AuthController {
                     .debugMessage(e.getMessage())
                     .build();
 
-            return ResponseEntity.status(ResponseStatusEnum.UNAUTHORIZED.getHttpStatus()).body(response);
+            return ResponseEntity.status(401).body(response);
         }
     }
 
@@ -174,56 +190,6 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/user")
-    public ResponseEntity<GenericResponse<Map<String, String>>> getCurrentUser(HttpServletRequest request) {
-        try {
-            String authHeader = request.getHeader("Authorization");
-
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                GenericResponse<Map<String, String>> response = GenericResponse.<Map<String, String>>builder()
-                        .status(ResponseStatusEnum.BAD_REQUEST)
-                        .message("Missing or invalid Authorization header")
-                        .build();
-                return ResponseEntity.status(ResponseStatusEnum.BAD_REQUEST.getHttpStatus()).body(response);
-            }
-
-            String token = authHeader.substring(7);
-
-            if (!jwtUtil.isTokenValid(token)) {
-                GenericResponse<Map<String, String>> response = GenericResponse.<Map<String, String>>builder()
-                        .status(ResponseStatusEnum.UNAUTHORIZED)
-                        .message("Token has expired or is invalid")
-                        .build();
-                return ResponseEntity.status(ResponseStatusEnum.UNAUTHORIZED.getHttpStatus()).body(response);
-            }
-
-            String username = jwtUtil.extractUsername(token);
-
-            Map<String, String> userData = new HashMap<>();
-            userData.put("username", username);
-            userData.put("tokenExpiry", jwtUtil.extractExpiration(token).toString());
-
-            GenericResponse<Map<String, String>> response = GenericResponse.<Map<String, String>>builder()
-                    .status(ResponseStatusEnum.SUCCESS)
-                    .message("User information retrieved successfully")
-                    .data(userData)
-                    .build();
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Error retrieving current user", e);
-
-            GenericResponse<Map<String, String>> response = GenericResponse.<Map<String, String>>builder()
-                    .status(ResponseStatusEnum.ERROR)
-                    .message("Could not retrieve user information")
-                    .debugMessage(e.getMessage())
-                    .build();
-
-            return ResponseEntity.status(ResponseStatusEnum.ERROR.getHttpStatus()).body(response);
-        }
     }
 
     private Map<String, Object> createValidationResponse(boolean valid, String username, String error) {

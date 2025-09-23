@@ -5,17 +5,38 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="07a37525-3d47-4edd-ba5e-cf921604cc3e" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/sqldialects.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Controller/AuthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Controller/AuthController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Service/AuthService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/ServiceImpl/AuthServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/ServiceImpl/AuthServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Entity/CardPaymentTransaction.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Entity/CardPaymentTransaction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SharedLib/sharedlib/src/main/java/com/shared/sharedlib/Entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/SharedLib/sharedlib/src/main/java/com/shared/sharedlib/Entity/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/DTOs/PaymentStatusResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/DTOs/PaymentStatusResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/ServiceImpl/MpesaServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/ServiceImpl/MpesaServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Controller/UserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Repository/UserRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Service/UserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/ServiceImpl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/ServiceImpl/UserServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/angular.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/angular.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Models/PaymentModel.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Models/PaymentModel.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Services/authservice.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Services/authservice.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Services/paymentservice.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Services/paymentservice.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.config.server.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/landing-page/landing-page.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/landing-page/landing-page.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/login/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/login/login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/login/login.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/login/login.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/payment/payment.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/payment/payment.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/payment/payment.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/payment/payment.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/main.server.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/main.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,35 +75,36 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.AuthserviceApplication.executor": "Run",
-    "Application.PaymentserviceApplication.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "Spring Boot.UserserviceApplication.executor": "Run",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.0",
-    "run.configurations.included.in.services": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.AuthserviceApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Application.PaymentserviceApplication.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;Spring Boot.UserserviceApplication.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;run.configurations.included.in.services&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.paymentservice.paymentservice.Config" />
       <recent name="com.userservice.userservice.Config" />
     </key>
   </component>
@@ -100,7 +122,7 @@
         <entry key="SpringBootApplicationConfigurationType">
           <value>
             <map>
-              <entry key="UserserviceApplication" value="FAILED" />
+              <entry key="UserserviceApplication" value="STOPPED" />
             </map>
           </value>
         </entry>
@@ -185,7 +207,10 @@
       <option name="presentableId" value="Default" />
       <updated>1758039043598</updated>
       <workItem from="1758039046038" duration="1576000" />
-      <workItem from="1758106202284" duration="16449000" />
+      <workItem from="1758106202284" duration="16760000" />
+      <workItem from="1758170334848" duration="12163000" />
+      <workItem from="1758516428159" duration="7782000" />
+      <workItem from="1758605374958" duration="15815000" />
     </task>
     <servers />
   </component>

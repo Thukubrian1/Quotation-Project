@@ -1,101 +1,91 @@
 package com.paymentservice.paymentservice.Config;
 
+import com.paymentservice.paymentservice.Config.BearerTokenAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final BearerTokenAuthenticationFilter bearerTokenAuthenticationFilter;
-
-    public SecurityConfig(BearerTokenAuthenticationFilter bearerTokenAuthenticationFilter) {
-        this.bearerTokenAuthenticationFilter = bearerTokenAuthenticationFilter;
-    }
+    private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
-    @Profile("!dev")
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/api/v1/payments/mpesa/callback")
-                        .ignoringRequestMatchers("/h2-console/**") // Disable CSRF for H2 console
-                )
-                .headers(headers -> headers
-                        .addHeaderWriter(new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN))
-                )
+                // Enable CORS with custom configuration
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+
+                // Disable CSRF for REST APIs
+                .csrf(csrf -> csrf.disable())
+
+                // Configure session management
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+
+                // Configure authorization
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/v1/payments/mpesa/callback").permitAll()
-                        .requestMatchers("/actuator/health", "/health").permitAll()
+                        // Allow all OPTIONS requests (for CORS preflight)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Allow public endpoints
                         .requestMatchers("/api/v1/payments/public-health").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll() // Allow H2 console access
-                        .requestMatchers("/api/v1/payments/**").authenticated()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/v1/payments/mpesa/callback").permitAll()
+
+                        // Allow Swagger/OpenAPI endpoints (if you're using them)
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
+                        // Allow actuator endpoints (optional, for monitoring)
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
+                        // All other API endpoints require authentication
+                        .requestMatchers("/api/**").authenticated()
+
+                        // Allow all other requests (you might want to be more restrictive)
+                        .anyRequest().permitAll()
                 )
+
+                // Add custom authentication filter
+                .addFilterBefore(bearerTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // Configure exception handling
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, authException) -> {
-                            response.setStatus(401);
                             response.setContentType("application/json");
-                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\"}");
+                            response.setStatus(401);
+                            response.getWriter().write("""
+                        {
+                            "status": "ERROR",
+                            "message": "Authentication required",
+                            "debugMessage": "Please provide a valid Bearer token"
+                        }
+                        """);
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(401); // Return 401 instead of 403
                             response.setContentType("application/json");
-                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Access denied\"}");
+                            response.setStatus(403);
+                            response.getWriter().write("""
+                        {
+                            "status": "ERROR",
+                            "message": "Access denied",
+                            "debugMessage": "You don't have permission to access this resource"
+                        }
+                        """);
                         })
-                )
-                .addFilterBefore(bearerTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-
-    @Bean
-    @Profile("dev")
-    public SecurityFilterChain devFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable()) // Disable CSRF completely in dev
-                .headers(headers -> headers
-                        .addHeaderWriter(new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.DENY))
-                        .disable() // Disable all security headers in dev for H2 console
-                )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/h2-console/**").permitAll() // H2 console - no auth needed in dev
-                        .requestMatchers("/api/v1/payments/mpesa/callback").permitAll()
-                        .requestMatchers("/api/v1/examples/**").permitAll() // All example endpoints - no auth in dev
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/health").permitAll()
-                        .requestMatchers("/api/v1/payments/public-health").permitAll()
-                        .requestMatchers("/api/v1/payments/**").authenticated() // Still require auth for payment endpoints
-                        .anyRequest().permitAll() // Allow all other requests in dev
-                )
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.setStatus(401);
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\"}");
-                        })
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(401); // Return 401 instead of 403
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Access denied\"}");
-                        })
-                )
-                .addFilterBefore(bearerTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                );
 
         return http.build();
     }

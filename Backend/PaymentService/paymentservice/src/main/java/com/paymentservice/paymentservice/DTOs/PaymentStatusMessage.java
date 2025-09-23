@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class PaymentStatusResponse {
+public class PaymentStatusMessage {
     private String checkoutRequestId;
     private String merchantRequestId;
     private String phoneNumber;
@@ -22,7 +22,6 @@ public class PaymentStatusResponse {
     private String statusMessage;
     private String mpesaReceiptNumber;
     private LocalDateTime transactionDate;
-    private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer resultCode;
     private String resultDescription;

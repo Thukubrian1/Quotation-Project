@@ -1,3 +1,4 @@
+// Enhanced MpesaServiceImpl.java with WebSocket real-time updates
 package com.paymentservice.paymentservice.ServiceImpl;
 
 import com.paymentservice.paymentservice.Config.MpesaProperties;
@@ -6,6 +7,7 @@ import com.paymentservice.paymentservice.Entity.PaymentTransaction;
 import com.paymentservice.paymentservice.Repository.PaymentTransactionRepository;
 import com.paymentservice.paymentservice.Service.AuthServiceClient;
 import com.paymentservice.paymentservice.Service.MpesaService;
+import com.paymentservice.paymentservice.Service.PaymentWebSocketService;
 import com.shared.sharedlib.Enums.PaymentStatus;
 import com.shared.sharedlib.Enums.ResponseStatusEnum;
 import com.shared.sharedlib.Exceptions.BusinessException;
@@ -31,10 +33,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MpesaServiceImpl implements MpesaService {
 
-    @Qualifier("restTemplate") // Use the configured RestTemplate with bearer token
+    @Qualifier("restTemplate")
     private final RestTemplate authenticatedRestTemplate;
 
-    @Qualifier("mpesaRestTemplate") // Use separate RestTemplate for M-Pesa API calls
+    @Qualifier("mpesaRestTemplate")
     private final RestTemplate mpesaRestTemplate;
 
     @Value("${external.service.auth-service.base-url}")
@@ -43,167 +45,7 @@ public class MpesaServiceImpl implements MpesaService {
     private final MpesaProperties mpesaProperties;
     private final PaymentTransactionRepository paymentRepository;
     private final AuthServiceClient authServiceClient;
-
-    /**
-     * Formats Kenyan phone number to international format for M-Pesa API
-     * Converts 0741819799 to 254741819799
-     */
-    private String formatPhoneNumber(String phoneNumber) {
-        if (!StringUtils.hasText(phoneNumber)) {
-            throw new BusinessException(
-                    ResponseStatusEnum.BAD_REQUEST,
-                    "Phone number is required",
-                    "phoneNumber cannot be null or empty"
-            );
-        }
-
-        // Remove any spaces or special characters
-        String cleanedNumber = phoneNumber.replaceAll("[^0-9]", "");
-
-        // Handle different formats
-        if (cleanedNumber.startsWith("254")) {
-            // Already in international format
-            if (cleanedNumber.length() != 12) {
-                throw new BusinessException(
-                        ResponseStatusEnum.BAD_REQUEST,
-                        "Invalid phone number format",
-                        "Phone number in 254 format must be 12 digits"
-                );
-            }
-            return cleanedNumber;
-        } else if (cleanedNumber.startsWith("0")) {
-            // Convert from 07XXXXXXXX to 2547XXXXXXXX
-            if (cleanedNumber.length() != 10) {
-                throw new BusinessException(
-                        ResponseStatusEnum.BAD_REQUEST,
-                        "Invalid phone number format",
-                        "Phone number in 0 format must be 10 digits"
-                );
-            }
-            return "254" + cleanedNumber.substring(1);
-        } else if (cleanedNumber.length() == 9) {
-            // Handle 7XXXXXXXX format
-            return "254" + cleanedNumber;
-        } else {
-            throw new BusinessException(
-                    ResponseStatusEnum.BAD_REQUEST,
-                    "Invalid phone number format",
-                    "Phone number must be in format 0741819799, 254741819799, or 741819799"
-            );
-        }
-    }
-
-    @Override
-    public PaymentResponse initiateSTKPush(PaymentRequest request) {
-        try {
-            log.info("Starting STK push process for phone: {}, amount: {}", request.getPhoneNumber(), request.getAmount());
-
-            // Validate request
-            validatePaymentRequest(request);
-
-            // Format phone number to international format
-            String formattedPhoneNumber = formatPhoneNumber(request.getPhoneNumber());
-            log.info("Formatted phone number from {} to {}", request.getPhoneNumber(), formattedPhoneNumber);
-
-            // Get access token from M-Pesa
-            String accessToken = getMpesaAccessToken();
-            log.debug("Successfully obtained M-Pesa access token: {}",
-                    accessToken.substring(0, Math.min(20, accessToken.length())) + "...");
-
-            // Generate password and timestamp
-            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-            String password = generatePassword(timestamp);
-
-            // Create STK push request with formatted phone number
-            StkPushRequest stkRequest = createStkPushRequest(request, password, timestamp, formattedPhoneNumber);
-
-            // Set headers with proper authorization
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + accessToken);
-            headers.set("Cache-Control", "no-cache");
-
-            HttpEntity<StkPushRequest> entity = new HttpEntity<>(stkRequest, headers);
-
-            // Make API call using M-Pesa RestTemplate
-            String url = mpesaProperties.getStkPushRequestUrl();
-            log.debug("Making STK push request to: {}", url);
-            log.debug("Request headers: Authorization: Bearer {}",
-                    accessToken.substring(0, Math.min(20, accessToken.length())) + "...");
-            log.debug("Request body: {}", stkRequest);
-
-            ResponseEntity<StkPushResponse> response = mpesaRestTemplate.exchange(
-                    url, HttpMethod.POST, entity, StkPushResponse.class);
-
-            StkPushResponse stkResponse = response.getBody();
-
-            if (stkResponse == null) {
-                throw new BusinessException(
-                        ResponseStatusEnum.ERROR,
-                        "Empty response received from M-Pesa API",
-                        "M-Pesa API returned null response"
-                );
-            }
-
-            log.info("STK push response - ResponseCode: {}, CheckoutRequestID: {}, Description: {}",
-                    stkResponse.getResponseCode(), stkResponse.getCheckoutRequestID(),
-                    stkResponse.getResponseDescription());
-
-            // Check if STK push was successful
-            if (!"0".equals(stkResponse.getResponseCode())) {
-                log.warn("STK push failed with response code: {}, message: {}, description: {}",
-                        stkResponse.getResponseCode(), stkResponse.getCustomerMessage(),
-                        stkResponse.getResponseDescription());
-
-                throw new BusinessException(
-                        ResponseStatusEnum.BAD_REQUEST,
-                        "STK push failed: " + stkResponse.getCustomerMessage(),
-                        "M-Pesa response code: " + stkResponse.getResponseCode() +
-                                ", Description: " + stkResponse.getResponseDescription()
-                );
-            }
-
-            // Save transaction to database with original phone number from request
-            PaymentTransaction transaction = createPaymentTransaction(request, stkResponse);
-            PaymentTransaction savedTransaction = paymentRepository.save(transaction);
-            log.info("Payment transaction saved with ID: {}", savedTransaction.getId());
-
-            // Return successful response
-            return PaymentResponse.builder()
-                    .merchantRequestId(stkResponse.getMerchantRequestID())
-                    .checkoutRequestId(stkResponse.getCheckoutRequestID())
-                    .responseCode(stkResponse.getResponseCode())
-                    .message(stkResponse.getCustomerMessage())
-                    .status(PaymentStatus.PENDING.name())
-                    .build();
-
-        } catch (HttpClientErrorException e) {
-            log.error("Client error during STK push - Status: {}, Headers: {}, Response: {}",
-                    e.getStatusCode(), e.getResponseHeaders(), e.getResponseBodyAsString());
-            throw new BusinessException(
-                    ResponseStatusEnum.BAD_REQUEST,
-                    "Invalid request to M-Pesa API: " + e.getStatusCode(),
-                    "HTTP " + e.getStatusCode() + ": " + e.getResponseBodyAsString()
-            );
-
-        } catch (HttpServerErrorException e) {
-            log.error("Server error during STK push - Status: {}, Response: {}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
-            throw new BusinessException(
-                    ResponseStatusEnum.ERROR,
-                    "M-Pesa API server error",
-                    "HTTP " + e.getStatusCode() + ": " + e.getResponseBodyAsString()
-            );
-
-        } catch (Exception e) {
-            log.error("Unexpected error during STK push for phone: {}", request.getPhoneNumber(), e);
-            throw new BusinessException(
-                    ResponseStatusEnum.ERROR,
-                    "Failed to initiate payment",
-                    e.getMessage()
-            );
-        }
-    }
+    private final PaymentWebSocketService paymentWebSocketService; // Add WebSocket service
 
     @Override
     public void handleCallback(StkCallback callback) {
@@ -237,11 +79,12 @@ public class MpesaServiceImpl implements MpesaService {
 
             PaymentTransaction transaction = transactionOpt.get();
 
-            // Map M-Pesa result codes to payment statuses
-            PaymentStatus newStatus = mapResultCodeToStatus(resultCode, callbackData.getResultDesc());
-            transaction.setStatus(newStatus);
+            // Map M-Pesa result codes to payment statuses with detailed messages
+            PaymentStatusInfo statusInfo = mapResultCodeToStatusInfo(resultCode, callbackData.getResultDesc());
+            transaction.setStatus(statusInfo.getStatus());
 
-            log.info("Payment status updated to {} for CheckoutRequestID: {}", newStatus, checkoutRequestId);
+            log.info("Payment status updated to {} for CheckoutRequestID: {} - Message: {}",
+                    statusInfo.getStatus(), checkoutRequestId, statusInfo.getMessage());
 
             // Extract additional data for successful payments
             if (resultCode == 0) {
@@ -249,10 +92,13 @@ public class MpesaServiceImpl implements MpesaService {
             }
 
             transaction.setUpdatedAt(LocalDateTime.now());
-            paymentRepository.save(transaction);
+            PaymentTransaction savedTransaction = paymentRepository.save(transaction);
+
+            // Send real-time update via WebSocket
+            sendRealTimeUpdate(savedTransaction, statusInfo, resultCode, callbackData.getResultDesc());
 
             log.info("Payment callback processed successfully for CheckoutRequestID: {} with status: {}",
-                    checkoutRequestId, newStatus);
+                    checkoutRequestId, statusInfo.getStatus());
 
         } catch (BusinessException e) {
             throw e;
@@ -281,6 +127,7 @@ public class MpesaServiceImpl implements MpesaService {
         }
 
         PaymentTransaction transaction = transactionOpt.get();
+        String statusMessage = getStatusMessage(transaction.getStatus());
 
         return PaymentStatusResponse.builder()
                 .checkoutRequestId(transaction.getCheckoutRequestId())
@@ -289,11 +136,251 @@ public class MpesaServiceImpl implements MpesaService {
                 .amount(transaction.getAmount())
                 .accountReference(transaction.getAccountReference())
                 .status(transaction.getStatus().name())
+                .statusMessage(statusMessage)
                 .mpesaReceiptNumber(transaction.getMpesaReceiptNumber())
                 .transactionDate(transaction.getTransactionDate())
                 .createdAt(transaction.getCreatedAt())
                 .updatedAt(transaction.getUpdatedAt())
                 .build();
+    }
+
+    private void sendRealTimeUpdate(PaymentTransaction transaction, PaymentStatusInfo statusInfo,
+                                    Integer resultCode, String resultDescription) {
+        try {
+            PaymentStatusMessage statusMessage = PaymentStatusMessage.builder()
+                    .checkoutRequestId(transaction.getCheckoutRequestId())
+                    .merchantRequestId(transaction.getMerchantRequestId())
+                    .phoneNumber(transaction.getPhoneNumber())
+                    .amount(transaction.getAmount())
+                    .accountReference(transaction.getAccountReference())
+                    .status(transaction.getStatus().name())
+                    .statusMessage(statusInfo.getMessage())
+                    .mpesaReceiptNumber(transaction.getMpesaReceiptNumber())
+                    .transactionDate(transaction.getTransactionDate())
+                    .updatedAt(transaction.getUpdatedAt())
+                    .resultCode(resultCode)
+                    .resultDescription(resultDescription)
+                    .build();
+
+            paymentWebSocketService.sendPaymentUpdate(transaction.getCheckoutRequestId(), statusMessage);
+
+        } catch (Exception e) {
+            log.error("Failed to send real-time update for CheckoutRequestID: {}",
+                    transaction.getCheckoutRequestId(), e);
+        }
+    }
+
+    private PaymentStatusInfo mapResultCodeToStatusInfo(Integer resultCode, String resultDesc) {
+        if (resultCode == null) {
+            return new PaymentStatusInfo(PaymentStatus.FAILED, "Payment failed - unknown error");
+        }
+
+        switch (resultCode) {
+            case 0:
+                return new PaymentStatusInfo(PaymentStatus.COMPLETED, "Payment completed successfully");
+            case 1:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Insufficient funds in your M-Pesa account");
+            case 1001:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Invalid phone number provided");
+            case 1019:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Invalid amount specified");
+            case 1032:
+                return new PaymentStatusInfo(PaymentStatus.CANCELLED, "Payment cancelled by user");
+            case 1036:
+                return new PaymentStatusInfo(PaymentStatus.CANCELLED, "Payment cancelled by user");
+            case 1037:
+                return new PaymentStatusInfo(PaymentStatus.EXPIRED, "Payment request expired - user could not be reached");
+            case 1012:
+                return new PaymentStatusInfo(PaymentStatus.EXPIRED, "Payment request timed out");
+            case 2001:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Wrong M-Pesa PIN entered");
+            case 1025:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Unable to process payment - account locked");
+            case 1026:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Account not active");
+            case 1027:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Not a registered M-Pesa user");
+            case 9999:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Request timeout - please try again");
+            case 1031:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Transaction limit exceeded");
+            case 1033:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Would exceed daily transaction limit");
+            case 1034:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Would exceed monthly transaction limit");
+            case 1039:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "M-Pesa service temporarily unavailable");
+            case 1040:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Insufficient balance for transaction fee");
+            case 2006:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Transaction declined by risk management");
+            case 4001:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Invalid merchant configuration");
+            case 4002:
+                return new PaymentStatusInfo(PaymentStatus.FAILED, "Merchant account suspended");
+            default:
+                log.warn("Unknown M-Pesa result code: {} with description: {}", resultCode, resultDesc);
+                return new PaymentStatusInfo(PaymentStatus.FAILED,
+                        "Payment failed: " + (resultDesc != null ? resultDesc : "Unknown error"));
+        }
+    }
+
+    private String getStatusMessage(PaymentStatus status) {
+        switch (status) {
+            case PENDING:
+                return "Payment request sent to your phone. Please check your M-Pesa and enter your PIN.";
+            case COMPLETED:
+                return "Payment completed successfully!";
+            case FAILED:
+                return "Payment failed. Please try again.";
+            case CANCELLED:
+                return "Payment was cancelled by user.";
+            case EXPIRED:
+                return "Payment request expired. Please try again.";
+            default:
+                return "Payment status unknown.";
+        }
+    }
+
+    // Helper class for status information
+    private static class PaymentStatusInfo {
+        private final PaymentStatus status;
+        private final String message;
+
+        public PaymentStatusInfo(PaymentStatus status, String message) {
+            this.status = status;
+            this.message = message;
+        }
+
+        public PaymentStatus getStatus() {
+            return status;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+    }
+
+    // Existing methods remain the same...
+    private String formatPhoneNumber(String phoneNumber) {
+        if (!StringUtils.hasText(phoneNumber)) {
+            throw new BusinessException(
+                    ResponseStatusEnum.BAD_REQUEST,
+                    "Phone number is required",
+                    "phoneNumber cannot be null or empty"
+            );
+        }
+
+        String cleanedNumber = phoneNumber.replaceAll("[^0-9]", "");
+
+        if (cleanedNumber.startsWith("254")) {
+            if (cleanedNumber.length() != 12) {
+                throw new BusinessException(
+                        ResponseStatusEnum.BAD_REQUEST,
+                        "Invalid phone number format",
+                        "Phone number in 254 format must be 12 digits"
+                );
+            }
+            return cleanedNumber;
+        } else if (cleanedNumber.startsWith("0")) {
+            if (cleanedNumber.length() != 10) {
+                throw new BusinessException(
+                        ResponseStatusEnum.BAD_REQUEST,
+                        "Invalid phone number format",
+                        "Phone number in 0 format must be 10 digits"
+                );
+            }
+            return "254" + cleanedNumber.substring(1);
+        } else if (cleanedNumber.length() == 9) {
+            return "254" + cleanedNumber;
+        } else {
+            throw new BusinessException(
+                    ResponseStatusEnum.BAD_REQUEST,
+                    "Invalid phone number format",
+                    "Phone number must be in format 0741819799, 254741819799, or 741819799"
+            );
+        }
+    }
+
+    @Override
+    public PaymentResponse initiateSTKPush(PaymentRequest request) {
+
+        try {
+            log.info("Starting STK push process for phone: {}, amount: {}", request.getPhoneNumber(), request.getAmount());
+
+            validatePaymentRequest(request);
+            String formattedPhoneNumber = formatPhoneNumber(request.getPhoneNumber());
+            log.info("Formatted phone number from {} to {}", request.getPhoneNumber(), formattedPhoneNumber);
+
+            String accessToken = getMpesaAccessToken();
+            log.debug("Successfully obtained M-Pesa access token: {}",
+                    accessToken.substring(0, Math.min(20, accessToken.length())) + "...");
+
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            String password = generatePassword(timestamp);
+
+            StkPushRequest stkRequest = createStkPushRequest(request, password, timestamp, formattedPhoneNumber);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + accessToken);
+            headers.set("Cache-Control", "no-cache");
+
+            HttpEntity<StkPushRequest> entity = new HttpEntity<>(stkRequest, headers);
+
+            String url = mpesaProperties.getStkPushRequestUrl();
+            log.debug("Making STK push request to: {}", url);
+
+            ResponseEntity<StkPushResponse> response = mpesaRestTemplate.exchange(
+                    url, HttpMethod.POST, entity, StkPushResponse.class);
+
+            StkPushResponse stkResponse = response.getBody();
+
+            if (stkResponse == null) {
+                throw new BusinessException(
+                        ResponseStatusEnum.ERROR,
+                        "Empty response received from M-Pesa API",
+                        "M-Pesa API returned null response"
+                );
+            }
+
+            log.info("STK push response - ResponseCode: {}, CheckoutRequestID: {}, Description: {}",
+                    stkResponse.getResponseCode(), stkResponse.getCheckoutRequestID(),
+                    stkResponse.getResponseDescription());
+
+            if (!"0".equals(stkResponse.getResponseCode())) {
+                log.warn("STK push failed with response code: {}, message: {}, description: {}",
+                        stkResponse.getResponseCode(), stkResponse.getCustomerMessage(),
+                        stkResponse.getResponseDescription());
+
+                throw new BusinessException(
+                        ResponseStatusEnum.BAD_REQUEST,
+                        "STK push failed: " + stkResponse.getCustomerMessage(),
+                        "M-Pesa response code: " + stkResponse.getResponseCode() +
+                                ", Description: " + stkResponse.getResponseDescription()
+                );
+            }
+
+            PaymentTransaction transaction = createPaymentTransaction(request, stkResponse);
+            PaymentTransaction savedTransaction = paymentRepository.save(transaction);
+            log.info("Payment transaction saved with ID: {}", savedTransaction.getId());
+
+            return PaymentResponse.builder()
+                    .merchantRequestId(stkResponse.getMerchantRequestID())
+                    .checkoutRequestId(stkResponse.getCheckoutRequestID())
+                    .responseCode(stkResponse.getResponseCode())
+                    .message(stkResponse.getCustomerMessage())
+                    .status(PaymentStatus.PENDING.name())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error initiating STK push", e);
+            throw new BusinessException(
+                    ResponseStatusEnum.ERROR,
+                    "Failed to initiate payment",
+                    e.getMessage()
+            );
+        }
     }
 
     private void validatePaymentRequest(PaymentRequest request) {

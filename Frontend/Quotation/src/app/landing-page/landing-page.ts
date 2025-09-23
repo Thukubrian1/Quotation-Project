@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { UserSession } from '../Models/UserModel';
 
 @Component({
   selector: 'app-landing-page',
@@ -16,20 +17,25 @@ userEmail: string = '';
 
   ngOnInit(): void {
     // Check if user is logged in
+
     const userString = localStorage.getItem('user');
-    if (!userString) {
+    let userData: UserSession | null = null;
+    if (userString) {
+      try {
+        userData = JSON.parse(userString) as UserSession;
+      } catch (error) {
+        userData = null;
+      }
+    }
+
+    if (!userData) {
       this.router.navigate(['/login']);
       return;
     }
 
-    try {
-      const user = JSON.parse(userString);
-      this.userEmail = user.email;
-    } catch (error) {
-      this.router.navigate(['/login']);
-    }
+    this.userEmail = userData.userEmail;
   }
-
+  
   logout(): void {
     localStorage.removeItem('user');
     this.router.navigate(['/login']);

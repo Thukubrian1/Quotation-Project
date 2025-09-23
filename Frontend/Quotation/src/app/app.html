@@ -1,1 +1,19 @@
-<router-outlet></router-outlet>
+<!-- app.component.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your App</title>
+</head>
+<body>
+  <!-- Global Notification Component - This will show on all pages -->
+  <app-notification
+    [notifications]="notifications"
+    (dismissNotification)="onNotificationDismiss($event)">
+  </app-notification>
+
+  <!-- Router Content - This is where your pages will be displayed -->
+  <router-outlet></router-outlet>
+</body>
+</html>
