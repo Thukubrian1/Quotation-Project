@@ -20,6 +20,7 @@ export interface PaymentStatusResponse {
   amount: number;
   accountReference: string;
   status: string;
+  statusMessage: string;
   mpesaReceiptNumber?: string;
   transactionDate?: string;
   createdAt: string;

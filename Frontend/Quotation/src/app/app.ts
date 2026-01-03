@@ -1,13 +1,13 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { Notifications, Notification} from './notifications/notifications';
+import { Notifications, Notification } from './notifications/notifications';
 import { NotificationService } from './Services/notificationservice';
 import { Subject, takeUntil } from 'rxjs';
 
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterOutlet, Notifications],
+  imports: [RouterOutlet, Notifications],
   template: `
     <!-- Global Notification Component with fixed positioning -->
     <div class="notification-overlay">
@@ -128,7 +128,7 @@ export class App {
   notifications: Notification[] = [];
   private destroy$ = new Subject<void>();
 
-  constructor(private notificationService: NotificationService) {}
+  constructor(private notificationService: NotificationService) { }
 
   ngOnInit(): void {
     // Subscribe to global notifications
@@ -140,13 +140,7 @@ export class App {
       });
 
     // Test notification on app load (remove in production)
-    setTimeout(() => {
-      this.notificationService.showInfo(
-        'Application Ready',
-        'Your app is ready to use',
-        3000
-      );
-    }, 1000);
+    // Test notification removed to improve startup UX
   }
 
   ngOnDestroy(): void {

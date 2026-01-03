@@ -17,6 +17,8 @@ public class MpesaProperties {
     private String passKey; // Changed from stkPassKey
     private String callbackUrl; // Changed from stkPushCallbackUrl
     private String oauthEndpoint;
+    private  String queryStatusUrl;
+
 
 }
 

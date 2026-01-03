@@ -1,5 +1,5 @@
-// Enhanced payment.service.ts with SSR-safe WebSocket support
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+// Enhanced payment.service.ts with correct WebSocket endpoints
+import { Injectable, Inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
@@ -49,14 +49,15 @@ export interface PaymentStatusMessage {
   updatedAt: string;
   resultCode?: number;
   resultDescription?: string;
+  eventType?: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class PaymentService {
-  private baseUrl = 'http://localhost:8081/api/v1/payments';
-  private wsUrl = 'http://localhost:8081/ws-payment';
+  private baseUrl = 'http://localhost:8083/api/v1/payments';
+  private wsUrl = 'http://localhost:8083/ws-payment';
   private isBrowser: boolean;
 
   private stompClient: any = null;
@@ -66,16 +67,16 @@ export class PaymentService {
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
 
   private wsInitialized = false;
+  private currentSubscription: any = null;
 
   constructor(
     private http: HttpClient,
-    @Inject(PLATFORM_ID) private platformId: Object
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private ngZone: NgZone
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
 
-    // Only initialize WebSocket in browser after the component is ready
     if (this.isBrowser) {
-      // Delay WebSocket initialization to ensure DOM is ready
       setTimeout(() => this.initializeWebSocketConnection(), 100);
     }
   }
@@ -83,7 +84,6 @@ export class PaymentService {
   private getAuthHeaders(): HttpHeaders {
     let token = '';
 
-    // Only access localStorage in browser
     if (this.isBrowser && typeof localStorage !== 'undefined') {
       token = localStorage.getItem('jwt_token') || '';
     }
@@ -94,16 +94,14 @@ export class PaymentService {
     });
   }
 
-  // Initialize WebSocket connection - SSR safe
   private async initializeWebSocketConnection(): Promise<void> {
     if (!this.isBrowser || this.wsInitialized) {
       return;
     }
 
     try {
-      console.log('Initializing WebSocket connection...');
+      console.log('Initializing WebSocket connection to:', this.wsUrl);
 
-      // Dynamic imports to avoid SSR issues
       const { Client } = await import('@stomp/stompjs');
       const SockJS = (await import('sockjs-client')).default;
 
@@ -114,11 +112,11 @@ export class PaymentService {
 
       this.stompClient = new Client({
         webSocketFactory: () => new SockJS(this.wsUrl),
-        connectHeaders: {
-          Authorization: authToken ? `Bearer ${authToken}` : ''
-        },
+        connectHeaders: authToken ? {
+          Authorization: `Bearer ${authToken}`
+        } : {},
         debug: (str) => {
-          console.log('STOMP Debug:', str);
+          console.log('STOMP:', str);
         },
         reconnectDelay: 5000,
         heartbeatIncoming: 4000,
@@ -126,58 +124,91 @@ export class PaymentService {
       });
 
       this.stompClient.onConnect = (frame: any) => {
-        console.log('WebSocket connected:', frame);
-        this.connectionStatusSubject.next(true);
+        console.log('✓ WebSocket connected successfully');
+        this.ngZone.run(() => {
+          this.connectionStatusSubject.next(true);
+        });
         this.wsInitialized = true;
       };
 
       this.stompClient.onDisconnect = () => {
-        console.log('WebSocket disconnected');
-        this.connectionStatusSubject.next(false);
+        console.log('✗ WebSocket disconnected');
+        this.ngZone.run(() => {
+          this.connectionStatusSubject.next(false);
+        });
       };
 
       this.stompClient.onStompError = (frame: any) => {
-        console.error('WebSocket error:', frame);
-        this.connectionStatusSubject.next(false);
+        console.error('WebSocket STOMP error:', frame.headers['message']);
+        console.error('Error details:', frame.body);
+        this.ngZone.run(() => {
+          this.connectionStatusSubject.next(false);
+        });
       };
 
-      // Activate the client
+      this.stompClient.onWebSocketError = (error: any) => {
+        console.error('WebSocket connection error:', error);
+        this.ngZone.run(() => {
+          this.connectionStatusSubject.next(false);
+        });
+      };
+
       this.stompClient.activate();
 
     } catch (error) {
       console.error('Failed to initialize WebSocket:', error);
-      this.connectionStatusSubject.next(false);
+      this.ngZone.run(() => {
+        this.connectionStatusSubject.next(false);
+      });
     }
   }
 
-  // Subscribe to payment status updates for a specific checkout request
+  // Subscribe to payment status updates - CORRECTED ENDPOINT
   subscribeToPaymentStatus(checkoutRequestId: string): void {
     if (!this.isBrowser) {
       console.log('WebSocket subscription skipped on server');
       return;
     }
 
-    if (this.stompClient && this.stompClient.connected) {
-      const destination = `/topic/payment-status/${checkoutRequestId}`;
-      console.log('Subscribing to payment status updates:', destination);
+    // Unsubscribe from any previous subscription
+    if (this.currentSubscription) {
+      this.currentSubscription.unsubscribe();
+      this.currentSubscription = null;
+    }
 
-      this.stompClient.subscribe(destination, (message: any) => {
+    if (this.stompClient && this.stompClient.connected) {
+      // CRITICAL: Match the backend endpoint exactly
+      const destination = `/topic/payment/${checkoutRequestId}`;
+      console.log(`Subscribing to: ${destination}`);
+
+      this.currentSubscription = this.stompClient.subscribe(destination, (message: any) => {
         try {
           const statusUpdate: PaymentStatusMessage = JSON.parse(message.body);
-          console.log('Received payment status update:', statusUpdate);
-          this.paymentStatusSubject.next(statusUpdate);
+          console.log('📨 Real-time update received:', statusUpdate);
+          this.ngZone.run(() => {
+            this.paymentStatusSubject.next(statusUpdate);
+          });
         } catch (error) {
           console.error('Error parsing payment status update:', error);
         }
       });
+
+      console.log('✓ Subscribed to payment updates');
     } else {
-      console.warn('WebSocket not connected, cannot subscribe to payment status');
-      // Try to reconnect
-      this.reconnectWebSocket();
+      console.warn('WebSocket not connected, queuing subscription...');
+      // Wait for connection and retry
+      const connectionCheck = setInterval(() => {
+        if (this.stompClient && this.stompClient.connected) {
+          clearInterval(connectionCheck);
+          this.subscribeToPaymentStatus(checkoutRequestId);
+        }
+      }, 500);
+
+      // Stop checking after 10 seconds
+      setTimeout(() => clearInterval(connectionCheck), 10000);
     }
   }
 
-  // Reconnect WebSocket if connection is lost
   private reconnectWebSocket(): void {
     if (!this.isBrowser) return;
 
@@ -185,22 +216,23 @@ export class PaymentService {
       console.log('Attempting to reconnect WebSocket...');
       this.stompClient.activate();
     } else if (!this.wsInitialized) {
-      // Re-initialize if not done yet
       this.initializeWebSocketConnection();
     }
   }
 
-  // Unsubscribe from payment status updates
   unsubscribeFromPaymentStatus(): void {
     if (!this.isBrowser) return;
 
-    if (this.stompClient && this.stompClient.connected) {
-      console.log('Clearing payment status subscription');
-      this.paymentStatusSubject.next(null);
+    if (this.currentSubscription) {
+      this.currentSubscription.unsubscribe();
+      this.currentSubscription = null;
+      console.log('Unsubscribed from payment updates');
     }
+    this.ngZone.run(() => {
+      this.paymentStatusSubject.next(null);
+    });
   }
 
-  // Test connection (public endpoint)
   testConnection(): Observable<any> {
     return this.http.get(`${this.baseUrl}/public-health`).pipe(
       map(response => response),
@@ -208,7 +240,6 @@ export class PaymentService {
     );
   }
 
-  // Test authenticated connection
   testAuthenticatedConnection(): Observable<any> {
     return this.http.get(`${this.baseUrl}/mpesa/health`, {
       headers: this.getAuthHeaders()
@@ -218,7 +249,6 @@ export class PaymentService {
     );
   }
 
-  // Test OAuth endpoint
   testOAuth(): Observable<any> {
     return this.http.get(`${this.baseUrl}/test-oauth`, {
       headers: this.getAuthHeaders()
@@ -228,17 +258,19 @@ export class PaymentService {
     );
   }
 
-  // Initiate STK Push
   initiateSTKPush(request: PaymentRequest): Observable<PaymentResponse> {
+    console.log('Initiating STK Push:', request);
     return this.http.post<any>(`${this.baseUrl}/mpesa/stk-push`, request, {
       headers: this.getAuthHeaders()
     }).pipe(
-      map(response => response.data as PaymentResponse),
+      map(response => {
+        console.log('STK Push response:', response);
+        return response.data as PaymentResponse;
+      }),
       catchError(this.handleError)
     );
   }
 
-  // Check payment status (fallback method)
   checkPaymentStatus(checkoutRequestId: string): Observable<PaymentStatusResponse> {
     return this.http.get<any>(`${this.baseUrl}/status?checkoutRequestId=${checkoutRequestId}`, {
       headers: this.getAuthHeaders()
@@ -248,7 +280,6 @@ export class PaymentService {
     );
   }
 
-  // Phone number validation
   validatePhoneNumber(phoneNumber: string): boolean {
     if (!phoneNumber || !phoneNumber.trim()) {
       return false;
@@ -256,15 +287,13 @@ export class PaymentService {
 
     const cleaned = phoneNumber.replace(/\D/g, '');
 
-    // Check various formats
     return (
       (cleaned.startsWith('254') && cleaned.length === 12) ||
       (cleaned.startsWith('0') && cleaned.length === 10) ||
-      (cleaned.length === 9 && cleaned.startsWith('7'))
+      (cleaned.length === 9 && (cleaned.startsWith('7') || cleaned.startsWith('1')))
     );
   }
 
-  // Format phone number for display
   formatPhoneNumber(phoneNumber: string): string {
     if (!phoneNumber) return '';
 
@@ -281,21 +310,24 @@ export class PaymentService {
     return phoneNumber;
   }
 
-  // Get human-readable status message
   getStatusMessage(status: string, resultCode?: number): string {
-    switch (status?.toLowerCase()) {
-      case 'pending':
+    switch (status?.toUpperCase()) {
+      case 'FORM':
+        return 'Ready to process payment';
+      case 'PROCESSING':
+        return 'Initiating payment request...';
+      case 'PENDING':
         return 'Payment request sent to your phone. Please check your M-Pesa and enter your PIN.';
-      case 'completed':
+      case 'COMPLETED':
         return 'Payment completed successfully!';
-      case 'failed':
+      case 'FAILED':
         if (resultCode) {
           return this.getDetailedFailureMessage(resultCode);
         }
         return 'Payment failed. Please try again.';
-      case 'cancelled':
+      case 'CANCELLED':
         return 'Payment was cancelled by user.';
-      case 'expired':
+      case 'EXPIRED':
         return 'Payment request expired. Please try again.';
       default:
         return 'Unknown payment status.';
@@ -303,38 +335,21 @@ export class PaymentService {
   }
 
   private getDetailedFailureMessage(resultCode: number): string {
-    switch (resultCode) {
-      case 1:
-        return 'Insufficient funds in your M-Pesa account.';
-      case 1001:
-        return 'Invalid phone number provided.';
-      case 1019:
-        return 'Invalid amount specified.';
-      case 2001:
-        return 'Wrong M-Pesa PIN entered.';
-      case 1025:
-        return 'Unable to process payment - account locked.';
-      case 1026:
-        return 'Account not active.';
-      case 1027:
-        return 'Not a registered M-Pesa user.';
-      case 1031:
-        return 'Transaction limit exceeded.';
-      case 1033:
-        return 'Would exceed daily transaction limit.';
-      case 1034:
-        return 'Would exceed monthly transaction limit.';
-      case 1039:
-        return 'M-Pesa service temporarily unavailable.';
-      case 1040:
-        return 'Insufficient balance for transaction fee.';
-      case 2006:
-        return 'Transaction declined by risk management.';
-      case 9999:
-        return 'Request timeout - please try again.';
-      default:
-        return 'Payment failed. Please try again.';
-    }
+    const messages: { [key: number]: string } = {
+      0: 'Payment Completed Successfully',
+      1: 'Insufficient funds in your M-Pesa account',
+      17: 'Payment cancelled by user',
+      1032: 'Payment cancelled by user',
+      1036: 'Payment cancelled by user',
+      1037: 'Waiting for user to complete payment',
+      1012: 'Payment request timed out',
+      2001: 'Wrong M-Pesa PIN entered',
+      4001: 'Invalid merchant configuration',
+      4909: 'Payment Cancelled - User Declined',
+
+    };
+
+    return messages[resultCode] || 'Payment failed. Please try again.';
   }
 
   private handleError = (error: HttpErrorResponse): Observable<never> => {
@@ -342,18 +357,37 @@ export class PaymentService {
 
     if (error.error?.message) {
       errorMessage = error.error.message;
+    } else if (error.error?.debugMessage) {
+      errorMessage = error.error.debugMessage;
     } else if (error.message) {
       errorMessage = error.message;
+    } else if (error.status === 0) {
+      errorMessage = 'Unable to connect to payment service. Please check your connection.';
     }
 
-    console.error('Payment service error:', error);
+    console.error('Payment service error:', {
+      status: error.status,
+      message: errorMessage,
+      error: error.error
+    });
+
     return throwError(() => new Error(errorMessage));
   };
 
-  // Cleanup method
-  ngOnDestroy(): void {
-    if (this.isBrowser && this.stompClient && this.stompClient.connected) {
-      this.stompClient.deactivate();
+  disconnectWebSocket(): void {
+    if (this.isBrowser && this.stompClient) {
+      this.unsubscribeFromPaymentStatus();
+      if (this.stompClient.connected) {
+        this.stompClient.deactivate();
+      }
+      this.wsInitialized = false;
+      this.ngZone.run(() => {
+        this.connectionStatusSubject.next(false);
+      });
     }
+  }
+
+  ngOnDestroy(): void {
+    this.disconnectWebSocket();
   }
 }

@@ -14,7 +14,7 @@ export class AuthService {
   private TOKEN_KEY = 'authToken';
   private USERNAME_KEY = 'username';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // Test if auth service is reachable
   testConnection(): Observable<any> {
@@ -43,10 +43,10 @@ export class AuthService {
       switchMap((userAuthResponse) => {
         if (userAuthResponse.status === ResponseStatus.SUCCESS && userAuthResponse.data) {
           console.log('AuthService: User authentication successful');
-          
+
           const userData = userAuthResponse.data;
           const username = userData.userName;
-          
+
           // Step 2: Try to generate JWT token with auth service, but don't fail if it's down
           return this.generateJWTToken(username, email).pipe(
             map((tokenResponse) => {
@@ -62,22 +62,8 @@ export class AuthService {
               } as GenericResponse<AuthResponse>;
             }),
             catchError((tokenError) => {
-              // If JWT generation fails due to auth service being down, create mock token
-              console.warn('AuthService: JWT generation failed, proceeding with mock token:', tokenError);
-              
-              const mockToken = `mock_token_${Date.now()}_${username}`;
-              this.saveToken(mockToken);
-              this.saveUsername(username);
-              
-              return of({
-                status: ResponseStatus.SUCCESS,
-                message: 'Login successful (auth service unavailable)',
-                data: {
-                  access_token: mockToken,
-                  username: username,
-                  token_type: 'Bearer'
-                }
-              } as GenericResponse<AuthResponse>);
+              console.error('AuthService: JWT generation failed:', tokenError);
+              return throwError(() => this.handleHttpError(tokenError));
             })
           );
         } else {
@@ -104,8 +90,8 @@ export class AuthService {
       'Accept': 'application/json'
     });
 
-    return this.http.get<GenericResponse<UserDto>>(`${this.userUrl}/login`, { 
-      params, 
+    return this.http.get<GenericResponse<UserDto>>(`${this.userUrl}/login`, {
+      params,
       headers
     }).pipe(
       timeout(8000),
@@ -115,7 +101,7 @@ export class AuthService {
       }),
       catchError(error => {
         console.error('AuthService: User service authentication failed:', error);
-        
+
         if (error instanceof HttpErrorResponse) {
           switch (error.status) {
             case 404:
@@ -132,7 +118,7 @@ export class AuthService {
               return throwError(() => new Error(`Authentication failed: ${error.message || error.status}`));
           }
         }
-        
+
         return throwError(() => error);
       })
     );
@@ -178,7 +164,7 @@ export class AuthService {
     console.log('AuthService: Getting user details for username:', username);
 
     const token = this.getToken();
-    
+
     // Build headers - include token if available
     const headers = new HttpHeaders({
       'Content-Type': 'application/json',
@@ -244,7 +230,7 @@ export class AuthService {
     if (error instanceof HttpErrorResponse) {
       const statusCode = error.status;
       const errorMessage = error.error?.message || error.message || 'Unknown error occurred';
-      
+
       switch (statusCode) {
         case 0:
           return new Error('Connection failed. Please check if the service is running and your internet connection.');
@@ -269,11 +255,11 @@ export class AuthService {
           return new Error(`HTTP ${statusCode}: ${errorMessage}`);
       }
     }
-    
+
     if (error.name === 'TimeoutError') {
       return new Error('Request timed out. Please check your connection and try again.');
     }
-    
+
     return new Error(error.message || 'An unexpected error occurred.');
   }
 
@@ -324,9 +310,9 @@ export class AuthService {
   }
 
   // Check service availability without authentication
-  checkServiceAvailability(): Observable<{authService: boolean, userService: boolean}> {
+  checkServiceAvailability(): Observable<{ authService: boolean, userService: boolean }> {
     console.log('AuthService: Checking service availability...');
-    
+
     const authCheck = this.http.get(`${this.authUrl}/test`, {
       headers: new HttpHeaders({
         'Content-Type': 'application/json',
@@ -340,7 +326,7 @@ export class AuthService {
         return of(false);
       })
     );
-    
+
     const userCheck = this.http.get(`${this.userUrl}/test`, {
       headers: new HttpHeaders({
         'Content-Type': 'application/json',
@@ -362,7 +348,7 @@ export class AuthService {
       tap(result => console.log('Service availability check result:', result)),
       catchError(error => {
         console.error('Service availability check failed:', error);
-        return of({authService: false, userService: false});
+        return of({ authService: false, userService: false });
       })
     );
   }

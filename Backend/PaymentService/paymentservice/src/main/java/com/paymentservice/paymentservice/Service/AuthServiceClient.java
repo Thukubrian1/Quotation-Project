@@ -30,14 +30,17 @@ public class AuthServiceClient {
 
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<GenericResponse> response = restTemplate.postForEntity(
-                    url, entity, GenericResponse.class
-            );
+            ResponseEntity<GenericResponse<Map<String, Object>>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    new org.springframework.core.ParameterizedTypeReference<>() {
+                    });
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                GenericResponse responseBody = response.getBody();
-                if (responseBody.getData() instanceof Map) {
-                    Map<String, Object> data = (Map<String, Object>) responseBody.getData();
+                GenericResponse<Map<String, Object>> responseBody = response.getBody();
+                if (responseBody.getData() != null) {
+                    Map<String, Object> data = responseBody.getData();
                     return Boolean.TRUE.equals(data.get("valid"));
                 }
             }
@@ -60,14 +63,17 @@ public class AuthServiceClient {
             String requestBody = "username=" + username + "&password=" + password;
             HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
 
-            ResponseEntity<GenericResponse> response = restTemplate.postForEntity(
-                    url, entity, GenericResponse.class
-            );
+            ResponseEntity<GenericResponse<Map<String, Object>>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    new org.springframework.core.ParameterizedTypeReference<>() {
+                    });
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                GenericResponse responseBody = response.getBody();
-                if (responseBody.getData() instanceof Map) {
-                    Map<String, Object> data = (Map<String, Object>) responseBody.getData();
+                GenericResponse<Map<String, Object>> responseBody = response.getBody();
+                if (responseBody.getData() != null) {
+                    Map<String, Object> data = responseBody.getData();
                     return (String) data.get("access_token");
                 }
             }

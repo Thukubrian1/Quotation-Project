@@ -30,8 +30,8 @@ public class CardProcessingServiceImpl implements CardProcessingService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     public BankResponse processPayment(String cardNumber, String cvv, String expiryMonth,
-                                       String expiryYear, String cardholderName,
-                                       BigDecimal amount, String currency, String transactionId) {
+            String expiryYear, String cardholderName,
+            BigDecimal amount, String currency, String transactionId) {
 
         try {
             // Prepare bank API request
@@ -55,12 +55,12 @@ public class CardProcessingServiceImpl implements CardProcessingService {
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(bankRequest, headers);
 
             // Call bank API
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     bankApiEndpoint + "/transactions/authorize",
                     HttpMethod.POST,
                     entity,
-                    Map.class
-            );
+                    new org.springframework.core.ParameterizedTypeReference<>() {
+                    });
 
             Map<String, Object> responseBody = response.getBody();
 
@@ -69,8 +69,7 @@ public class CardProcessingServiceImpl implements CardProcessingService {
                     (String) responseBody.get("authorization_code"),
                     (String) responseBody.get("response_code"),
                     (String) responseBody.get("response_message"),
-                    "SUCCESS".equals(responseBody.get("status"))
-            );
+                    "SUCCESS".equals(responseBody.get("status")));
 
         } catch (Exception e) {
             return new BankResponse(
@@ -78,8 +77,7 @@ public class CardProcessingServiceImpl implements CardProcessingService {
                     null,
                     "ERR_001",
                     "Bank communication error: " + e.getMessage(),
-                    false
-            );
+                    false);
         }
     }
 
@@ -97,12 +95,12 @@ public class CardProcessingServiceImpl implements CardProcessingService {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(refundRequest, headers);
 
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     bankApiEndpoint + "/transactions/refund",
                     HttpMethod.POST,
                     entity,
-                    Map.class
-            );
+                    new org.springframework.core.ParameterizedTypeReference<>() {
+                    });
 
             Map<String, Object> responseBody = response.getBody();
 
@@ -111,8 +109,7 @@ public class CardProcessingServiceImpl implements CardProcessingService {
                     (String) responseBody.get("authorization_code"),
                     (String) responseBody.get("response_code"),
                     (String) responseBody.get("response_message"),
-                    "SUCCESS".equals(responseBody.get("status"))
-            );
+                    "SUCCESS".equals(responseBody.get("status")));
 
         } catch (Exception e) {
             return new BankResponse(
@@ -120,8 +117,7 @@ public class CardProcessingServiceImpl implements CardProcessingService {
                     null,
                     "ERR_002",
                     "Refund processing error: " + e.getMessage(),
-                    false
-            );
+                    false);
         }
     }
 
@@ -133,7 +129,7 @@ public class CardProcessingServiceImpl implements CardProcessingService {
         private final boolean success;
 
         public BankResponse(String transactionId, String authorizationCode,
-                            String responseCode, String responseMessage, boolean success) {
+                String responseCode, String responseMessage, boolean success) {
             this.transactionId = transactionId;
             this.authorizationCode = authorizationCode;
             this.responseCode = responseCode;
@@ -142,10 +138,24 @@ public class CardProcessingServiceImpl implements CardProcessingService {
         }
 
         // Getters
-        public String getTransactionId() { return transactionId; }
-        public String getAuthorizationCode() { return authorizationCode; }
-        public String getResponseCode() { return responseCode; }
-        public String getResponseMessage() { return responseMessage; }
-        public boolean isSuccess() { return success; }
+        public String getTransactionId() {
+            return transactionId;
+        }
+
+        public String getAuthorizationCode() {
+            return authorizationCode;
+        }
+
+        public String getResponseCode() {
+            return responseCode;
+        }
+
+        public String getResponseMessage() {
+            return responseMessage;
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
     }
 }

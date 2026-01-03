@@ -4,7 +4,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { timeout, catchError, throwError, Subject, takeUntil } from 'rxjs';
+import { timeout, catchError, throwError, Subject, takeUntil, finalize } from 'rxjs';
 import { AuthService } from '../Services/authservice';
 import { UserService } from '../Services/UserService';
 import { ResponseStatus } from '../Models/UserModel';
@@ -45,7 +45,7 @@ export class Login implements OnDestroy {
     private authService: AuthService,
     private userService: UserService,
     private notificationService: NotificationService
-  ) {}
+  ) { }
 
 
   ngOnDestroy(): void {
@@ -116,10 +116,10 @@ export class Login implements OnDestroy {
   // Check if form is valid for button state
   isFormValid(): boolean {
     const emailValid = this.loginData.email &&
-                      this.loginData.email.trim().length > 0 &&
-                      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.loginData.email.trim());
+      this.loginData.email.trim().length > 0 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.loginData.email.trim());
     const passwordValid = this.loginData.password &&
-                         this.loginData.password.trim().length >= 6;
+      this.loginData.password.trim().length >= 6;
     return !!(emailValid && passwordValid);
   }
 
@@ -142,10 +142,12 @@ export class Login implements OnDestroy {
     // Use the AuthService login method which now properly handles your backend flow
     this.authService.login(email, password).pipe(
       timeout(timeoutDuration),
+      finalize(() => {
+        this.isLoading = false;
+      }),
       takeUntil(this.destroy$)
     ).subscribe({
       next: (response) => {
-        this.isLoading = false;
         console.log('Login: Authentication response:', response);
 
         if (response.status === ResponseStatus.SUCCESS && response.data) {
@@ -166,7 +168,6 @@ export class Login implements OnDestroy {
         }
       },
       error: (error) => {
-        this.isLoading = false;
         console.error('Login: Authentication error:', error);
 
         // Handle specific error types
@@ -210,7 +211,7 @@ export class Login implements OnDestroy {
   private handleLoginError(message: string): void {
     // Provide specific error messages based on the response
     if (message.toLowerCase().includes('invalid email') ||
-        message.toLowerCase().includes('invalid username or password')) {
+      message.toLowerCase().includes('invalid username or password')) {
       this.notificationService.showLoginError('credentials');
     } else if (message.toLowerCase().includes('inactive')) {
       this.notificationService.showLoginError('account', 'Your account is inactive. Please contact support.');

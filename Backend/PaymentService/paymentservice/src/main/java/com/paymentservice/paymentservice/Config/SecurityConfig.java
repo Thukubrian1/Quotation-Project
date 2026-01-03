@@ -1,6 +1,5 @@
 package com.paymentservice.paymentservice.Config;
 
-import com.paymentservice.paymentservice.Config.BearerTokenAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,8 +32,7 @@ public class SecurityConfig {
 
                 // Configure session management
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // Configure authorization
                 .authorizeHttpRequests(authz -> authz
@@ -55,8 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
 
                         // Allow all other requests (you might want to be more restrictive)
-                        .anyRequest().permitAll()
-                )
+                        .anyRequest().permitAll())
 
                 // Add custom authentication filter
                 .addFilterBefore(bearerTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -67,25 +64,24 @@ public class SecurityConfig {
                             response.setContentType("application/json");
                             response.setStatus(401);
                             response.getWriter().write("""
-                        {
-                            "status": "ERROR",
-                            "message": "Authentication required",
-                            "debugMessage": "Please provide a valid Bearer token"
-                        }
-                        """);
+                                    {
+                                        "status": "ERROR",
+                                        "message": "Authentication required",
+                                        "debugMessage": "Please provide a valid Bearer token"
+                                    }
+                                    """);
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setContentType("application/json");
                             response.setStatus(403);
                             response.getWriter().write("""
-                        {
-                            "status": "ERROR",
-                            "message": "Access denied",
-                            "debugMessage": "You don't have permission to access this resource"
-                        }
-                        """);
-                        })
-                );
+                                    {
+                                        "status": "ERROR",
+                                        "message": "Access denied",
+                                        "debugMessage": "You don't have permission to access this resource"
+                                    }
+                                    """);
+                        }));
 
         return http.build();
     }

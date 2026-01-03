@@ -3,7 +3,7 @@ package com.paymentservice.paymentservice.ServiceImpl;
 import com.paymentservice.paymentservice.DTOs.CardPaymentRequestDTO;
 import com.paymentservice.paymentservice.DTOs.CardPaymentResponseDTO;
 import com.paymentservice.paymentservice.Entity.CardPaymentTransaction;
-import com.paymentservice.paymentservice.Repository.PaymentTransactionRepository;
+
 import com.paymentservice.paymentservice.Repository.TransactionRepository;
 import com.paymentservice.paymentservice.Service.CardProcessingService;
 import com.paymentservice.paymentservice.Service.TokenizationService;
@@ -56,8 +56,7 @@ public class TransactionServiceImpl implements TransactionService {
                 request.getExpiryMonth(),
                 request.getExpiryYear(),
                 request.getCardholderName(),
-                cardType
-        );
+                cardType);
 
         transaction.setCardTokenId(tokenId);
         transaction.setCardLastFourDigits(request.getCardNumber().substring(request.getCardNumber().length() - 4));
@@ -67,8 +66,8 @@ public class TransactionServiceImpl implements TransactionService {
         transaction = transactionRepository.save(transaction);
 
         // 4. Process payment with bank
-        CardProcessingServiceImpl.BankResponse bankResponse = (CardProcessingServiceImpl.BankResponse)
-                cardProcessingService.processPayment(
+        CardProcessingServiceImpl.BankResponse bankResponse = (CardProcessingServiceImpl.BankResponse) cardProcessingService
+                .processPayment(
                         request.getCardNumber(),
                         request.getCvv(),
                         request.getExpiryMonth(),
@@ -76,8 +75,7 @@ public class TransactionServiceImpl implements TransactionService {
                         request.getCardholderName(),
                         request.getAmount(),
                         request.getCurrency(),
-                        transaction.getId()
-                );
+                        transaction.getId());
 
         // 5. Update transaction based on bank response
         transaction.setBankTransactionId(bankResponse.getTransactionId());
@@ -166,9 +164,12 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     private String getCardType(String cardNumber) {
-        if (cardNumber.startsWith("4")) return "VISA";
-        if (cardNumber.startsWith("5") || cardNumber.startsWith("2")) return "MASTERCARD";
-        if (cardNumber.startsWith("3")) return "AMEX";
+        if (cardNumber.startsWith("4"))
+            return "VISA";
+        if (cardNumber.startsWith("5") || cardNumber.startsWith("2"))
+            return "MASTERCARD";
+        if (cardNumber.startsWith("3"))
+            return "AMEX";
         return "UNKNOWN";
     }
 

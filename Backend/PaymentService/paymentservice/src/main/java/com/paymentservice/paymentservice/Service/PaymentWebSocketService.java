@@ -14,52 +14,47 @@ public class PaymentWebSocketService {
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
-     * Send payment status update to specific checkout request ID subscribers
+     * Send payment update to a specific checkout request ID
+     * Frontend subscribes to: /topic/payment/{checkoutRequestId}
      */
-    public void sendPaymentUpdate(String checkoutRequestId, PaymentStatusMessage statusMessage) {
+    public void sendPaymentUpdate(String checkoutRequestId, PaymentStatusMessage message) {
         try {
-            String destination = "/topic/payment-status/" + checkoutRequestId;
+            String destination = "/topic/payment/" + checkoutRequestId;
+            log.info("Sending WebSocket update to {}: status={}, message={}",
+                    destination, message.getStatus(), message.getStatusMessage());
 
-            log.info("Sending WebSocket update to destination: {} for status: {}",
-                    destination, statusMessage.getStatus());
+            messagingTemplate.convertAndSend(destination, message);
 
-            messagingTemplate.convertAndSend(destination, statusMessage);
-
-            log.info("✅ WebSocket message sent successfully to {} subscribers", destination);
-
+            log.debug("WebSocket message sent successfully to {}", destination);
         } catch (Exception e) {
-            log.error("❌ Failed to send WebSocket payment update for CheckoutRequestID: {}",
+            log.error("Failed to send WebSocket message for checkoutRequestId: {}",
                     checkoutRequestId, e);
         }
     }
 
     /**
-     * Send broadcast payment update to all payment subscribers
+     * Send payment initiation notification
      */
-    public void sendBroadcastPaymentUpdate(PaymentStatusMessage statusMessage) {
+    public void sendPaymentInitiated(String checkoutRequestId, PaymentStatusMessage message) {
         try {
-            String destination = "/topic/payment-updates";
-
-            log.info("Sending broadcast WebSocket update for CheckoutRequestID: {}",
-                    statusMessage.getCheckoutRequestId());
-
-            messagingTemplate.convertAndSend(destination, statusMessage);
-
+            String destination = "/topic/payment/" + checkoutRequestId;
+            log.info("Sending payment initiated notification to {}", destination);
+            messagingTemplate.convertAndSend(destination, message);
         } catch (Exception e) {
-            log.error("Failed to send broadcast payment update", e);
+            log.error("Failed to send payment initiated notification", e);
         }
     }
 
     /**
-     * Send test message (for debugging)
+     * Send general payment notification to all subscribers
      */
-    public void sendTestMessage(String message) {
+    public void broadcastPaymentStatus(PaymentStatusMessage message) {
         try {
-            String destination = "/topic/test";
-            messagingTemplate.convertAndSend(destination, message);
-            log.info("Test message sent: {}", message);
+            log.info("Broadcasting payment status update: checkoutRequestId={}",
+                    message.getCheckoutRequestId());
+            messagingTemplate.convertAndSend("/topic/payments", message);
         } catch (Exception e) {
-            log.error("Failed to send test message", e);
+            log.error("Failed to broadcast payment status", e);
         }
     }
 }

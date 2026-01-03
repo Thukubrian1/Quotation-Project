@@ -47,28 +47,26 @@ public class AuthServiceImpl implements AuthService {
                 throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "Invalid username or password");
             }
 
-
-            if(existingUser.getUserRole() == null || !existingUser.getUserRole().equals("Admin")){
-
-                log.warn("Email mismatch for user: {}. Expected: {}, Got: {}",
-                        userName, existingUser.getUserEmail(), userEmail);
-                throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "User must have admin Role");
-            }
+            // if(existingUser.getUserRole() == null ||
+            // !existingUser.getUserRole().equals("Admin")){
+            //
+            // log.warn("Email mismatch for user: {}. Expected: {}, Got: {}",
+            // userName, existingUser.getUserEmail(), userEmail);
+            // throw new BusinessException(ResponseStatusEnum.UNAUTHORIZED, "User must have
+            // admin Role");
+            // }
             String token = jwtUtil.generateToken(userName);
             log.info("Successful login for username: {}", userName);
             return token;
 
-        }
-        catch (BusinessException e) {
+        } catch (BusinessException e) {
             throw e;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Unexpected error during login for username: {}", userName, e);
             throw new BusinessException(
                     ResponseStatusEnum.ERROR,
                     "Could not process login request",
-                    e.getMessage()
-            );
+                    e.getMessage());
         }
     }
 }

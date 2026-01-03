@@ -7,36 +7,19 @@
     <list default="true" id="07a37525-3d47-4edd-ba5e-cf921604cc3e" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Controller/AuthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Controller/AuthController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/Service/AuthService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/ServiceImpl/AuthServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/AuthService/authservice/src/main/java/com/authservice/authservice/ServiceImpl/AuthServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Config/MpesaProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Config/MpesaProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Config/WebSocketConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Config/WebSocketConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/DTOs/PaymentStatusMessage.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/DTOs/PaymentStatusMessage.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/DTOs/PaymentStatusResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/DTOs/PaymentStatusResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Service/PaymentWebSocketService.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/Service/PaymentWebSocketService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/ServiceImpl/MpesaServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/java/com/paymentservice/paymentservice/ServiceImpl/MpesaServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Controller/UserController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Repository/UserRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/Service/UserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/ServiceImpl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/UserService/userservice/src/main/java/com/userservice/userservice/ServiceImpl/UserServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/angular.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/angular.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/PaymentService/paymentservice/src/main/resources/application.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Models/PaymentModel.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Models/PaymentModel.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Services/authservice.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Services/authservice.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Services/paymentservice.spec.ts" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Services/paymentservice.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/Services/paymentservice.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.config.server.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/app.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/landing-page/landing-page.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/landing-page/landing-page.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/login/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/login/login.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/login/login.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/login/login.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/payment/payment.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/payment/payment.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/app/payment/payment.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/app/payment/payment.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/main.server.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Frontend/Quotation/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Frontend/Quotation/src/main.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -79,6 +62,7 @@
   &quot;keyToString&quot;: {
     &quot;Application.AuthserviceApplication.executor&quot;: &quot;Run&quot;,
     &quot;Application.PaymentserviceApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Application.UserserviceApplication.executor&quot;: &quot;Run&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
     &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
@@ -117,19 +101,8 @@
         <option value="SpringBootApplicationConfigurationType" />
       </set>
     </option>
-    <option name="configurationStatuses">
-      <map>
-        <entry key="SpringBootApplicationConfigurationType">
-          <value>
-            <map>
-              <entry key="UserserviceApplication" value="STOPPED" />
-            </map>
-          </value>
-        </entry>
-      </map>
-    </option>
   </component>
-  <component name="RunManager" selected="Spring Boot.UserserviceApplication">
+  <component name="RunManager" selected="Application.PaymentserviceApplication">
     <configuration name="AuthserviceApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.authservice.authservice.AuthserviceApplication" />
       <module name="authservice" />
@@ -149,6 +122,19 @@
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="com.paymentservice.paymentservice.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="UserserviceApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.userservice.userservice.UserserviceApplication" />
+      <module name="userservice" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.userservice.userservice.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -186,18 +172,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.AuthserviceApplication" />
         <item itemvalue="Application.PaymentserviceApplication" />
+        <item itemvalue="Application.AuthserviceApplication" />
+        <item itemvalue="Application.UserserviceApplication" />
       </list>
     </recent_temporary>
-  </component>
-  <component name="SharedIndexes">
-    <attachedChunks>
-      <set>
-        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.23892.409" />
-        <option value="bundled-js-predefined-d6986cc7102b-e03c56caf84a-JavaScript-IU-252.23892.409" />
-      </set>
-    </attachedChunks>
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">

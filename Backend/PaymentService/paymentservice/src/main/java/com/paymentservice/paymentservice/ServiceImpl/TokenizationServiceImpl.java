@@ -4,7 +4,7 @@ import com.paymentservice.paymentservice.Entity.CardToken;
 import com.paymentservice.paymentservice.Repository.CardTokenRepository;
 import com.paymentservice.paymentservice.Service.TokenizationService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Cipher;
@@ -24,7 +24,7 @@ public class TokenizationServiceImpl implements TokenizationService {
     private final String ENCRYPTION_KEY = "MySecretKey12345"; // 16 bytes for AES-128
 
     public String tokenizeCard(String cardNumber, String cvv, String expiryMonth,
-                               String expiryYear, String cardholderName, String cardType) {
+            String expiryYear, String cardholderName, String cardType) {
         try {
             // Generate unique token
             String tokenId = generateUniqueToken();

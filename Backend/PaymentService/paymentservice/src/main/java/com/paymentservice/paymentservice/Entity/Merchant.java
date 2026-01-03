@@ -35,6 +35,7 @@ public class Merchant {
     @Column(name = "api_key")
     private String apiKey;
 
+    @Builder.Default
     @Column(name = "status")
     private Boolean active = true;
 

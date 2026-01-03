@@ -7,13 +7,28 @@
   </div>
 
   <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-    <form action="#" method="POST" class="space-y-6">
+    
+    <!-- Error Alert -->
+    <div *ngIf="showError" class="mb-4 rounded-md bg-red-50 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">{{ errorMessage }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" #registerForm="ngForm" class="space-y-6">
         <div>
         <div class="flex items-center justify-between">
           <label for="fname" class="block text-sm/6 font-medium text-gray-100">First Name</label>
         </div>
         <div class="mt-2">
-          <input id="fname" type="text" name="text" required autocomplete="first name" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
+          <input id="fname" type="text" name="firstName" [(ngModel)]="registerData.firstName" required class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
         </div>
       </div>
 
@@ -22,14 +37,14 @@
           <label for="lname" class="block text-sm/6 font-medium text-gray-100">Last Name</label>
         </div>
         <div class="mt-2">
-          <input id="lname" type="text" name="text" required autocomplete="last name" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
+          <input id="lname" type="text" name="lastName" [(ngModel)]="registerData.lastName" required class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
         </div>
       </div>
 
       <div>
         <label for="email" class="block text-sm/6 font-medium text-gray-100">Email address</label>
         <div class="mt-2">
-          <input id="new-email" type="email" name="email" required autocomplete="email" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
+          <input id="new-email" type="email" name="email" [(ngModel)]="registerData.email" required autocomplete="email" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
         </div>
       </div>
 
@@ -38,27 +53,36 @@
           <label for="password" class="block text-sm/6 font-medium text-gray-100">Password</label>
         </div>
         <div class="mt-2">
-          <input id="new-password" type="password" name="password" required autocomplete="new-password" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
+          <input id="new-password" type="password" name="password" [(ngModel)]="registerData.password" required autocomplete="new-password" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
         </div>
       </div>
 
        <div>
         <div class="flex items-center justify-between">
-          <label for="Confirm Password" class="block text-sm/6 font-medium text-gray-100">Confirm Password</label>
+          <label for="confirm-password" class="block text-sm/6 font-medium text-gray-100">Confirm Password</label>
         </div>
         <div class="mt-2">
-          <input id="confirm-password" type="password" name="password" required autocomplete="new-password" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
+          <input id="confirm-password" type="password" name="confirmPassword" [(ngModel)]="registerData.confirmPassword" required autocomplete="new-password" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6" />
         </div>
       </div>
 
       <div>
-        <button type="submit" class="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">Sign up</button>
+        <button type="submit" [disabled]="!registerForm.form.valid || isLoading" class="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+          <span *ngIf="isLoading" class="mr-2">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline shadow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Creating Account...
+          </span>
+          <span *ngIf="!isLoading">Sign up</span>
+        </button>
       </div>
     </form>
 
     <p class="mt-10 text-center text-sm/6 text-gray-400">
       Already a member?
-      <a (click)="goToLogin()" class="font-semibold text-indigo-400 hover:text-indigo-300">Sign in</a>
+      <a (click)="goToLogin()" class="cursor-pointer font-semibold text-indigo-400 hover:text-indigo-300">Sign in</a>
     </p>
   </div>
 </div>

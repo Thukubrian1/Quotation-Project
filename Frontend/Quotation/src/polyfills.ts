@@ -1,11 +1,10 @@
+import 'zone.js';  // Included with Angular CLI.
+
 /**
- * ZONELESS ANGULAR POLYFILLS
- * 
- * This application uses provideZonelessChangeDetection()
- * NO ZONE.JS imports are needed or wanted here
+ * APPLICATION POLYFILLS
  */
 
-// Browser-only polyfills for WebSocket libraries
+// Browser-only polyfills for WebSocket libraries (stompjs, sockjs)
 if (typeof window !== 'undefined') {
   // Global polyfill for @stomp/stompjs
   if (typeof (window as any).global === 'undefined') {
@@ -40,12 +39,3 @@ if (typeof window !== 'undefined') {
     (window as any).setImmediate = (fn: Function) => setTimeout(fn, 0);
   }
 }
-
-/**
- * DO NOT ADD ZONE.JS IMPORTS HERE
- * 
- * Zone.js should never be imported when using zoneless change detection:
- * - No import 'zone.js'
- * - No import 'zone.js/node' 
- * - No import 'zone.js/testing'
- */

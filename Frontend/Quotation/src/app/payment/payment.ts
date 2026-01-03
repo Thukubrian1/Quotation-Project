@@ -1,19 +1,18 @@
-// Enhanced payment.component.ts with WebSocket real-time updates
+// Enhanced payment.component.ts - Fixed notification blocking
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
+import { takeWhile } from 'rxjs/operators';
 
-// Import all required interfaces
 import {
   PaymentRequest,
   PaymentResponse,
   PaymentStatusResponse,
-  PaymentStatusMessage
+  PaymentStatusMessage,
+  PaymentService
 } from '../Services/paymentservice';
 
-import { PaymentService } from '../Services/paymentservice';
 import { AuthService } from '../Services/authservice';
 import { NotificationService } from '../Services/notificationservice';
 
@@ -57,33 +56,52 @@ export class Payment implements OnInit, OnDestroy {
   isAuthenticated = false;
   wsConnected = false;
 
-  // Payment tracking
   checkoutRequestId = '';
   merchantRequestId = '';
   mpesaReceiptNumber = '';
   currentStatusMessage = '';
+  resultCode: number | undefined;
 
-  // Subscriptions
   private paymentStatusSubscription?: Subscription;
   private wsConnectionSubscription?: Subscription;
-  private fallbackStatusCheckSubscription?: Subscription;
+  private fallbackPollingSubscription?: Subscription;
+  private isPaymentInProgress = false;
+  private lastUpdateTime = 0;
 
   constructor(
-    private router: Router,
     private paymentService: PaymentService,
     private authService: AuthService,
     private notificationService: NotificationService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.checkAuthentication();
     this.setupWebSocketConnection();
     this.testConnection();
+    this.setupBeforeUnloadHandler();
   }
 
   ngOnDestroy(): void {
     this.cleanup();
+    this.removeBeforeUnloadHandler();
   }
+
+  private setupBeforeUnloadHandler(): void {
+    window.addEventListener('beforeunload', this.handleBeforeUnload);
+  }
+
+  private removeBeforeUnloadHandler(): void {
+    window.removeEventListener('beforeunload', this.handleBeforeUnload);
+  }
+
+  private handleBeforeUnload = (event: BeforeUnloadEvent): string | void => {
+    if (this.isPaymentInProgress && this.currentState === PaymentState.PENDING) {
+      const message = 'Payment is in progress. Are you sure you want to leave?';
+      event.preventDefault();
+      event.returnValue = message;
+      return message;
+    }
+  };
 
   private checkAuthentication(): void {
     this.isAuthenticated = this.authService.isLoggedIn();
@@ -97,122 +115,160 @@ export class Payment implements OnInit, OnDestroy {
   }
 
   private setupWebSocketConnection(): void {
-    // Monitor WebSocket connection status
     this.wsConnectionSubscription = this.paymentService.connectionStatus$.subscribe(
       connected => {
         this.wsConnected = connected;
         if (connected) {
-          console.log('WebSocket connected successfully');
-          this.notificationService.showSuccess(
-            'Real-time Updates',
-            'Connected for instant payment updates',
-            3000
-          );
-        } else {
-          console.log('WebSocket disconnected');
-          if (this.currentState === PaymentState.PENDING) {
-            this.notificationService.showWarning(
-              'Connection Issue',
-              'Real-time updates may be delayed. We\'ll keep checking for you.',
-              5000
+          console.log('✅ WebSocket connected - Real-time updates enabled');
+          if (this.currentState !== PaymentState.PENDING) {
+            this.notificationService.showSuccess(
+              'Connected',
+              'Real-time payment updates enabled',
+              3000
             );
-            this.startFallbackStatusCheck();
+          }
+        } else {
+          console.log('❌ WebSocket disconnected');
+          if (this.currentState === PaymentState.PENDING) {
+            console.log('⚠️ WebSocket down, relying on backend polling + fallback');
+            this.startFallbackPolling();
           }
         }
       }
     );
 
-    // Monitor payment status updates
     this.paymentStatusSubscription = this.paymentService.paymentStatus$.subscribe(
       (statusUpdate: PaymentStatusMessage | null) => {
         if (statusUpdate && statusUpdate.checkoutRequestId === this.checkoutRequestId) {
-          console.log('Received real-time payment update:', statusUpdate);
-          this.handleRealTimeStatusUpdate(statusUpdate);
+          console.log('📨 Real-time update received:', statusUpdate);
+          this.lastUpdateTime = Date.now();
+          this.stopFallbackPolling();
+          this.handlePaymentStatusUpdate(statusUpdate);
         }
       }
     );
   }
 
-  private handleRealTimeStatusUpdate(statusUpdate: PaymentStatusMessage): void {
+  private handlePaymentStatusUpdate(statusUpdate: PaymentStatusMessage): void {
     this.currentStatusMessage = statusUpdate.statusMessage;
     this.mpesaReceiptNumber = statusUpdate.mpesaReceiptNumber || '';
+    this.resultCode = statusUpdate.resultCode;
 
-    // Stop fallback polling since we got a real-time update
-    this.stopFallbackStatusCheck();
+    console.log(`Payment ${statusUpdate.eventType || statusUpdate.status}:`, statusUpdate.statusMessage);
 
-    switch (statusUpdate.status) {
+    const status = statusUpdate.status.toUpperCase();
+
+    switch (status) {
+      case 'PENDING':
+        if (statusUpdate.eventType === 'INITIATED') {
+          this.currentState = PaymentState.PENDING;
+          this.isPaymentInProgress = true;
+        }
+        // Status updates silently - UI will reflect changes automatically
+        break;
+
       case 'COMPLETED':
-        this.currentState = PaymentState.COMPLETED;
-        this.notificationService.showSuccess(
-          'Payment Successful!',
-          `KES ${statusUpdate.amount?.toLocaleString()} payment completed successfully`,
-          8000
-        );
+        this.handlePaymentSuccess(statusUpdate);
         break;
 
       case 'FAILED':
-        this.currentState = PaymentState.FAILED;
-        this.notificationService.showError(
-          'Payment Failed',
-          statusUpdate.statusMessage || 'The M-Pesa payment was not completed',
-          8000
-        );
-        this.showErrorMessage(statusUpdate.statusMessage || 'Payment failed');
+        this.handlePaymentFailure(statusUpdate);
         break;
 
       case 'CANCELLED':
-        this.currentState = PaymentState.CANCELLED;
-        this.notificationService.showWarning(
-          'Payment Cancelled',
-          'The M-Pesa payment was cancelled by the user',
-          6000
-        );
+        this.handlePaymentCancelled(statusUpdate);
         break;
 
       case 'EXPIRED':
-        this.currentState = PaymentState.EXPIRED;
-        this.notificationService.showWarning(
-          'Payment Expired',
-          'Payment request timed out. Please try again.',
-          6000
-        );
-        this.showErrorMessage('Payment request expired');
-        break;
-
-      case 'PENDING':
-        // Still pending - show periodic reminders
-        this.notificationService.showInfo(
-          'Still Waiting',
-          statusUpdate.statusMessage || 'Please complete the M-Pesa prompt on your phone',
-          4000
-        );
+        this.handlePaymentExpired(statusUpdate);
         break;
 
       default:
-        console.log('Unknown payment status:', statusUpdate.status);
+        console.warn('Unknown payment status:', statusUpdate.status);
         break;
+    }
+  }
+
+  private handlePaymentSuccess(statusUpdate: PaymentStatusMessage): void {
+    this.currentState = PaymentState.COMPLETED;
+    this.isLoading = false;
+    this.isPaymentInProgress = false;
+
+    this.notificationService.dismissAll();
+    this.notificationService.showSuccess(
+      'Payment Successful!',
+      `KES ${statusUpdate.amount?.toLocaleString()} paid successfully`,
+      0
+    );
+
+    this.playNotificationSound('success');
+  }
+
+  private handlePaymentFailure(statusUpdate: PaymentStatusMessage): void {
+    this.currentState = PaymentState.FAILED;
+    this.isLoading = false;
+    this.isPaymentInProgress = false;
+
+    this.notificationService.dismissAll();
+    this.notificationService.showError(
+      'Payment Failed',
+      statusUpdate.statusMessage,
+      0
+    );
+    this.showErrorMessage(statusUpdate.statusMessage);
+
+    this.playNotificationSound('error');
+  }
+
+  private handlePaymentCancelled(statusUpdate: PaymentStatusMessage): void {
+    this.currentState = PaymentState.CANCELLED;
+    this.isLoading = false;
+    this.isPaymentInProgress = false;
+
+    this.notificationService.dismissAll();
+    this.notificationService.showWarning(
+      'Payment Cancelled',
+      'You cancelled the M-Pesa payment',
+      0
+    );
+  }
+
+  private handlePaymentExpired(statusUpdate: PaymentStatusMessage): void {
+    this.currentState = PaymentState.EXPIRED;
+    this.isLoading = false;
+    this.isPaymentInProgress = false;
+
+    this.notificationService.dismissAll();
+    this.notificationService.showWarning(
+      'Payment Expired',
+      statusUpdate.statusMessage,
+      0
+    );
+    this.showErrorMessage(statusUpdate.statusMessage);
+  }
+
+  private playNotificationSound(type: 'success' | 'error'): void {
+    try {
+      const audio = new Audio();
+      audio.volume = 0.5;
+    } catch (error) {
+      // Silent fail
     }
   }
 
   testConnection(): void {
     this.paymentService.testConnection().subscribe({
       next: (response) => {
-        console.log('Backend connection successful:', response);
-        this.notificationService.showSuccess(
-          'Connection Successful',
-          'Payment service is ready',
-          3000
-        );
-
+        console.log('✅ Backend connection successful:', response);
         if (this.isAuthenticated) {
           this.testAuthenticatedConnection();
         }
       },
       error: (error) => {
-        console.warn('Backend connection failed:', error.message);
+        console.error('❌ Backend connection failed:', error.message);
         this.notificationService.showError(
           'Connection Failed',
-          'Unable to connect to payment service. Please check your connection.',
+          'Unable to connect to payment service',
           0
         );
       }
@@ -222,19 +278,14 @@ export class Payment implements OnInit, OnDestroy {
   private testAuthenticatedConnection(): void {
     this.paymentService.testAuthenticatedConnection().subscribe({
       next: (response) => {
-        console.log('Authenticated connection successful:', response);
-        this.notificationService.showInfo(
-          'Authentication Verified',
-          'You can make payments',
-          3000
-        );
+        console.log('✅ Authenticated connection successful:', response);
       },
       error: (error) => {
-        console.warn('Authenticated connection failed:', error.message);
-        if (error.message.includes('Authentication')) {
+        console.error('❌ Authentication failed:', error.message);
+        if (error.message.includes('Authentication') || error.message.includes('401')) {
           this.isAuthenticated = false;
           this.notificationService.showError(
-            'Authentication Expired',
+            'Session Expired',
             'Please log in again to make payments',
             0
           );
@@ -265,7 +316,7 @@ export class Payment implements OnInit, OnDestroy {
     if (!this.paymentService.validatePhoneNumber(this.paymentData.phone)) {
       this.notificationService.showError(
         'Invalid Phone Number',
-        'Please enter a valid Kenyan phone number (e.g., 0741819799)',
+        'Please enter a valid Kenyan phone number',
         5000
       );
       return;
@@ -277,153 +328,156 @@ export class Payment implements OnInit, OnDestroy {
   private initiatePayment(): void {
     this.currentState = PaymentState.PROCESSING;
     this.isLoading = true;
+    this.isPaymentInProgress = true;
     this.clearError();
+    this.lastUpdateTime = Date.now();
 
-    this.notificationService.showInfo(
-      'Processing Payment',
-      'Sending payment request to M-Pesa...',
-      0
-    );
+    // No notification during processing - UI loading state is sufficient
 
     const paymentRequest: PaymentRequest = {
       phoneNumber: this.paymentData.phone,
       amount: this.paymentData.amount!,
       accountReference: this.paymentData.accountReference,
-      transactionDescription: `Payment of KES ${this.paymentData.amount} for ${this.paymentData.accountReference}`
+      transactionDescription: `Payment for ${this.paymentData.accountReference}`
     };
 
-    console.log('Initiating payment:', paymentRequest);
+    console.log('💳 Initiating payment:', {
+      ...paymentRequest,
+      phoneNumber: this.paymentService.formatPhoneNumber(paymentRequest.phoneNumber)
+    });
 
     this.paymentService.initiateSTKPush(paymentRequest).subscribe({
       next: (response: PaymentResponse) => {
-        console.log('STK Push successful:', response);
+        console.log('✅ STK Push initiated:', response);
         this.handlePaymentInitiated(response);
       },
       error: (error) => {
-        console.error('STK Push failed:', error);
+        console.error('❌ STK Push failed:', error);
         this.handlePaymentError(error.message);
-
-        if (error.message.includes('Authentication')) {
-          this.isAuthenticated = false;
-        }
       }
     });
   }
 
   private handlePaymentInitiated(response: PaymentResponse): void {
-    this.notificationService.dismissByType('info');
+    this.notificationService.dismissAll();
 
     this.checkoutRequestId = response.checkoutRequestId;
     this.merchantRequestId = response.merchantRequestId;
     this.currentState = PaymentState.PENDING;
     this.isLoading = false;
-    this.currentStatusMessage = 'Payment request sent to your phone. Please check your M-Pesa and enter your PIN.';
 
-    this.notificationService.showSuccess(
-      'Payment Request Sent',
-      `Check your phone (${this.formattedPhoneNumber}) for M-Pesa prompt`,
-      8000
-    );
+    console.log(`📡 Subscribing to payment updates for: ${this.checkoutRequestId}`);
+    console.log(`⏱️ Backend will poll M-Pesa every 3 seconds for up to 2 minutes`);
 
-    // Subscribe to real-time updates for this specific payment
     this.paymentService.subscribeToPaymentStatus(this.checkoutRequestId);
 
-    // Also start fallback polling as backup
-    this.startFallbackStatusCheck();
+    setTimeout(() => {
+      if (this.currentState === PaymentState.PENDING) {
+        const timeSinceLastUpdate = Date.now() - this.lastUpdateTime;
+        if (timeSinceLastUpdate > 15000) {
+          console.log('⚠️ No updates for 15s, starting safety fallback');
+          this.startFallbackPolling();
+        }
+      }
+    }, 15000);
+
+    // Single persistent notification - won't block status updates
+    this.notificationService.showInfo(
+      'Check Your Phone',
+      `M-Pesa prompt sent to ${this.formattedPhoneNumber}. Enter your PIN to complete payment.`,
+      0
+    );
   }
 
   private handlePaymentError(errorMessage: string): void {
     this.currentState = PaymentState.FAILED;
     this.isLoading = false;
+    this.isPaymentInProgress = false;
 
-    this.notificationService.dismissByType('info');
+    this.notificationService.dismissAll();
     this.notificationService.showError(
       'Payment Failed',
-      errorMessage || 'Failed to initiate payment. Please try again.',
-      8000
+      errorMessage || 'Failed to initiate payment',
+      0
     );
 
     this.showErrorMessage(errorMessage);
+
+    if (errorMessage.includes('Authentication') || errorMessage.includes('401')) {
+      this.isAuthenticated = false;
+    }
   }
 
-  // Fallback status checking when WebSocket is not available
-  private startFallbackStatusCheck(): void {
-    this.stopFallbackStatusCheck(); // Clear any existing interval
+  private startFallbackPolling(): void {
+    this.stopFallbackPolling();
 
-    // Only start fallback if WebSocket is not connected
-    if (!this.wsConnected && this.checkoutRequestId) {
-      console.log('Starting fallback status checking...');
+    if (!this.checkoutRequestId) return;
 
-      let attempts = 0;
-      const maxAttempts = 15; // 1.5 minutes
+    console.log('🔄 Starting safety fallback polling (checks every 10s)...');
 
-      const checkStatus = () => {
+    let attempts = 0;
+    const maxAttempts = 15;
+
+    this.fallbackPollingSubscription = interval(5000)
+      .pipe(takeWhile(() => attempts < maxAttempts && this.currentState === PaymentState.PENDING))
+      .subscribe(() => {
         attempts++;
 
-        if (attempts > maxAttempts) {
-          this.stopFallbackStatusCheck();
-          this.currentState = PaymentState.EXPIRED;
-          this.notificationService.showWarning(
-            'Payment Verification Timed Out',
-            'Please check your M-Pesa messages to confirm if payment was completed',
-            0
-          );
+        const timeSinceLastUpdate = Date.now() - this.lastUpdateTime;
+        if (timeSinceLastUpdate < 4000) {
+          console.log('✅ Recent update received, skipping fallback poll');
           return;
         }
 
+        console.log(`🔍 Safety fallback check ${attempts}/${maxAttempts}`);
+
         this.paymentService.checkPaymentStatus(this.checkoutRequestId).subscribe({
           next: (status: PaymentStatusResponse) => {
-            console.log(`Fallback status check (${attempts}/${maxAttempts}):`, status);
+            console.log('📊 Fallback status:', status);
 
-            // Convert to PaymentStatusMessage format for consistent handling
-            const statusUpdate: PaymentStatusMessage = {
-              checkoutRequestId: status.checkoutRequestId,
-              merchantRequestId: status.merchantRequestId,
-              phoneNumber: status.phoneNumber,
-              amount: status.amount,
-              accountReference: status.accountReference,
-              status: status.status,
-              statusMessage: status.statusMessage,
-              mpesaReceiptNumber: status.mpesaReceiptNumber,
-              transactionDate: status.transactionDate,
-              updatedAt: status.updatedAt,
-              resultCode: status.resultCode,
-              resultDescription: status.resultDescription
-            };
+            if (status.status !== 'PENDING') {
+              this.lastUpdateTime = Date.now();
 
-            this.handleRealTimeStatusUpdate(statusUpdate);
+              const statusMessage: PaymentStatusMessage = {
+                checkoutRequestId: status.checkoutRequestId,
+                merchantRequestId: status.merchantRequestId,
+                phoneNumber: status.phoneNumber,
+                amount: status.amount,
+                accountReference: status.accountReference,
+                status: status.status,
+                statusMessage: status.statusMessage,
+                mpesaReceiptNumber: status.mpesaReceiptNumber,
+                transactionDate: status.transactionDate,
+                updatedAt: status.updatedAt,
+                resultCode: status.resultCode,
+                resultDescription: status.resultDescription
+              };
+
+              this.handlePaymentStatusUpdate(statusMessage);
+            }
           },
           error: (error) => {
-            console.error('Fallback status check error:', error);
+            console.error('❌ Fallback status check error:', error);
             if (error.message.includes('Authentication')) {
+              this.stopFallbackPolling();
               this.isAuthenticated = false;
-              this.stopFallbackStatusCheck();
+              this.isPaymentInProgress = false;
               this.notificationService.showError(
-                'Authentication Expired',
-                'Please log in again to continue',
+                'Session Expired',
+                'Please log in again',
                 0
               );
             }
           }
         });
-      };
-
-      // Check immediately, then every 6 seconds
-      setTimeout(checkStatus, 1000);
-      this.fallbackStatusCheckSubscription = new Subscription();
-      const intervalId = setInterval(checkStatus, 6000);
-
-      this.fallbackStatusCheckSubscription.add(() => {
-        clearInterval(intervalId);
       });
-    }
   }
 
-  private stopFallbackStatusCheck(): void {
-    if (this.fallbackStatusCheckSubscription) {
-      this.fallbackStatusCheckSubscription.unsubscribe();
-      this.fallbackStatusCheckSubscription = undefined;
-      console.log('Stopped fallback status checking');
+  private stopFallbackPolling(): void {
+    if (this.fallbackPollingSubscription) {
+      this.fallbackPollingSubscription.unsubscribe();
+      this.fallbackPollingSubscription = undefined;
+      console.log('⏹️ Stopped fallback polling');
     }
   }
 
@@ -432,6 +486,7 @@ export class Payment implements OnInit, OnDestroy {
       this.paymentData.phone?.trim() &&
       this.paymentData.amount &&
       this.paymentData.amount > 0 &&
+      this.paymentData.amount <= 70000 &&
       this.paymentData.accountReference?.trim()
     );
   }
@@ -458,6 +513,7 @@ export class Payment implements OnInit, OnDestroy {
   startNewPayment(): void {
     this.cleanup();
     this.checkAuthentication();
+
     this.currentState = PaymentState.FORM;
     this.paymentData = {
       phone: '',
@@ -468,6 +524,9 @@ export class Payment implements OnInit, OnDestroy {
     this.merchantRequestId = '';
     this.mpesaReceiptNumber = '';
     this.currentStatusMessage = '';
+    this.resultCode = undefined;
+    this.isPaymentInProgress = false;
+    this.lastUpdateTime = 0;
     this.clearError();
 
     this.notificationService.dismissAll();
@@ -479,21 +538,15 @@ export class Payment implements OnInit, OnDestroy {
   }
 
   private cleanup(): void {
-    this.stopFallbackStatusCheck();
+    this.stopFallbackPolling();
 
     if (this.paymentStatusSubscription) {
       this.paymentStatusSubscription.unsubscribe();
     }
 
-    if (this.wsConnectionSubscription) {
-      this.wsConnectionSubscription.unsubscribe();
-    }
-
-    // Unsubscribe from WebSocket updates
     this.paymentService.unsubscribeFromPaymentStatus();
   }
 
-  // Template helper getters
   get isFormValid(): boolean {
     return this.isValidPaymentData() && this.isAuthenticated;
   }
@@ -526,21 +579,31 @@ export class Payment implements OnInit, OnDestroy {
     return this.currentState === PaymentState.EXPIRED;
   }
 
-  // Get current status message for display
   get displayStatusMessage(): string {
-    return this.currentStatusMessage || this.getDefaultStatusMessage();
-  }
-
-  private getDefaultStatusMessage(): string {
+    if (this.currentStatusMessage) {
+      return this.currentStatusMessage;
+    }
     return this.paymentService.getStatusMessage(this.currentState);
   }
 
-  // Connection status helpers
   get connectionStatusText(): string {
-    return this.wsConnected ? 'Real-time updates active' : 'Using fallback checking';
+    if (this.wsConnected) {
+      return 'Real-time updates active';
+    } else if (this.currentState === PaymentState.PENDING) {
+      return 'Checking payment status...';
+    } else {
+      return 'Connecting...';
+    }
   }
 
   get connectionStatusClass(): string {
     return this.wsConnected ? 'text-green-400' : 'text-yellow-400';
+  }
+
+  canDeactivate(): boolean {
+    if (this.isPaymentInProgress && this.currentState === PaymentState.PENDING) {
+      return confirm('Payment is in progress. Are you sure you want to leave this page?');
+    }
+    return true;
   }
 }

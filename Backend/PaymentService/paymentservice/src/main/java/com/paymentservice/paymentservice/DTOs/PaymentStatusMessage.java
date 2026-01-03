@@ -25,4 +25,5 @@ public class PaymentStatusMessage {
     private LocalDateTime updatedAt;
     private Integer resultCode;
     private String resultDescription;
+    private String eventType;
 }
